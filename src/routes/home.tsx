@@ -9,12 +9,18 @@ import {
   refreshWorldCupData,
   getMyProfile,
   getFinishedMatches,
+  getLiveMatches,
+  getRecentEvents,
+  refreshLiveMatches,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
 import { MatchCard, CountdownBadge } from "@/components/MatchCard";
 import { usePlayer, PLAYER_META } from "@/lib/player-context";
 import { toast } from "sonner";
+import { eventIcon, eventLabelHe, formatMinute } from "@/lib/event-labels";
+import { teamLabel } from "@/lib/team-names";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/home")({
   head: () => ({ meta: [{ title: "המשחקים של היום · אתגר המונדיאל" }] }),
@@ -35,13 +41,47 @@ function Home() {
   const profileFn = useServerFn(getMyProfile);
   const refreshFn = useServerFn(refreshWorldCupData);
   const finishedFn = useServerFn(getFinishedMatches);
+  const liveFn = useServerFn(getLiveMatches);
+  const eventsFn = useServerFn(getRecentEvents);
+  const liveRefreshFn = useServerFn(refreshLiveMatches);
 
-  const today = useQuery({ queryKey: ["today"], queryFn: () => todayFn() });
-  const upcoming = useQuery({ queryKey: ["upcoming"], queryFn: () => upcomingFn({ data: { limit: 5 } }) });
-  const finished = useQuery({ queryKey: ["finished", 6], queryFn: () => finishedFn({ data: { limit: 6 } }) });
+  const live = useQuery({
+    queryKey: ["live"],
+    queryFn: () => liveFn(),
+    refetchInterval: 30_000,
+  });
+  const hasLive = (live.data?.length ?? 0) > 0;
+  const liveInterval = hasLive ? 30_000 : 5 * 60_000;
+
+  const today = useQuery({ queryKey: ["today"], queryFn: () => todayFn(), refetchInterval: liveInterval });
+  const upcoming = useQuery({
+    queryKey: ["upcoming"],
+    queryFn: () => upcomingFn({ data: { limit: 5 } }),
+    refetchInterval: liveInterval,
+  });
+  const finished = useQuery({
+    queryKey: ["finished", 6],
+    queryFn: () => finishedFn({ data: { limit: 6 } }),
+    refetchInterval: liveInterval,
+  });
+  const events = useQuery({
+    queryKey: ["recent-events"],
+    queryFn: () => eventsFn({ data: { limit: 25 } }),
+    refetchInterval: hasLive ? 30_000 : 2 * 60_000,
+  });
   const lb = useQuery({ queryKey: ["lb"], queryFn: () => lbFn() });
   const preds = useQuery({ queryKey: ["preds", active], queryFn: () => predsFn({ data: { playerName: active! } }) });
   const profile = useQuery({ queryKey: ["profile", active], queryFn: () => profileFn({ data: { name: active! } }) });
+
+  // While there are live matches, also hammer the server-side live sync every minute
+  // so the API quota is used to keep the feed fresh.
+  useEffect(() => {
+    if (!hasLive) return;
+    const id = setInterval(() => {
+      liveRefreshFn().catch(() => undefined);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [hasLive, liveRefreshFn]);
 
   const predByMatch = new Map((preds.data ?? []).map((p) => [p.match_id, p]));
 
@@ -49,7 +89,8 @@ function Home() {
     !today.isLoading &&
     (today.data?.length ?? 0) === 0 &&
     (upcoming.data?.length ?? 0) === 0 &&
-    (finished.data?.length ?? 0) === 0;
+    (finished.data?.length ?? 0) === 0 &&
+    !hasLive;
 
   const runRefresh = async () => {
     toast.loading("מרענן נתוני מונדיאל...", { id: "ref" });
@@ -94,6 +135,52 @@ function Home() {
             ⚡ טען נתונים
           </button>
         </div>
+      )}
+
+      {hasLive && (
+        <Section
+          title={
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-accent animate-pulse" />
+              משחקים חיים עכשיו
+            </span>
+          }
+        >
+          <div className="space-y-3">
+            {live.data!.map((m: any) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {(events.data?.length ?? 0) > 0 && (
+        <Section title="📣 מה חדש במונדיאל?">
+          <ol className="card-stadium divide-y divide-border overflow-hidden">
+            {events.data!.slice(0, 8).map((e: any) => {
+              const m = e.match;
+              const ht = teamLabel(m?.home_team);
+              const at = teamLabel(m?.away_team);
+              return (
+                <li key={e.id} className="flex items-center gap-3 p-3 text-sm">
+                  <span className="text-xl leading-none">{eventIcon(e)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold truncate">
+                      {e.player_name ?? eventLabelHe(e)}
+                      {e.team ? ` · ${teamLabel(e.team)}` : ""}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {eventLabelHe(e)} · {ht} {m?.home_score ?? "-"}:{m?.away_score ?? "-"} {at}
+                    </div>
+                  </div>
+                  <span className="text-xs font-black text-gold tabular-nums shrink-0">
+                    {formatMinute(e.minute, e.extra_time)}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </Section>
       )}
 
       <Section title="🔥 משחקים היום">
@@ -193,10 +280,10 @@ function StatPill({ label, value, accent }: { label: string; value: number; acce
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mb-6">
-      <h2 className="text-lg font-black mb-3">{title}</h2>
+      <h2 className="text-lg font-black mb-3 flex items-center gap-2">{title}</h2>
       {children}
     </section>
   );

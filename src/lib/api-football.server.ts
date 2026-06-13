@@ -87,6 +87,9 @@ export type AfEvent = {
 export const apiFootball = {
   teams: () => af<AfTeam[]>("/teams", { league: WORLD_CUP_LEAGUE_ID, season: WORLD_CUP_SEASON }),
   fixtures: () => af<AfFixture[]>("/fixtures", { league: WORLD_CUP_LEAGUE_ID, season: WORLD_CUP_SEASON }),
+  liveFixtures: () =>
+    af<AfFixture[]>("/fixtures", { league: WORLD_CUP_LEAGUE_ID, season: WORLD_CUP_SEASON, live: "all" }),
+  fixtureById: (id: number) => af<AfFixture[]>("/fixtures", { id }),
   standings: () => af<AfStanding[]>("/standings", { league: WORLD_CUP_LEAGUE_ID, season: WORLD_CUP_SEASON }),
   topScorers: () => af<AfTopScorer[]>("/players/topscorers", { league: WORLD_CUP_LEAGUE_ID, season: WORLD_CUP_SEASON }),
   events: (fixtureId: number) => af<AfEvent[]>("/fixtures/events", { fixture: fixtureId }),

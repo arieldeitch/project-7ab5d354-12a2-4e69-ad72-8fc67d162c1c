@@ -158,6 +158,156 @@ export const getFinishedMatches = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+/* ---------- Events ---------- */
+
+export const getMatchEvents = createServerFn({ method: "GET" })
+  .inputValidator((d: { matchId: number }) => z.object({ matchId: z.number() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("match_events")
+      .select("*, team:teams(*)")
+      .eq("match_id", data.matchId)
+      .order("minute", { ascending: true })
+      .order("extra_time", { ascending: true })
+      .order("id", { ascending: true });
+    return rows ?? [];
+  });
+
+export const getLiveMatches = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("matches")
+    .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
+    .eq("status", "live")
+    .order("kickoff_at");
+  return data ?? [];
+});
+
+export const getRecentEvents = createServerFn({ method: "GET" })
+  .inputValidator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("match_events")
+      .select(
+        "*, team:teams(*), match:matches(id,status,minute,live_status,home_score,away_score,home_team:teams!matches_home_team_id_fkey(*),away_team:teams!matches_away_team_id_fkey(*))",
+      )
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 30);
+    return rows ?? [];
+  });
+
+/**
+ * Live-mode sync: fast path called every ~minute while matches are live.
+ * Refreshes only currently-live (or just-finished) WC fixtures and pulls
+ * their events. Recalculates scores when anything finishes.
+ */
+export async function syncLiveMatchesInternal(): Promise<{
+  matches: number;
+  events: number;
+  finished: number;
+}> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { apiFootball, statusFromApi, stageFromRound } = await import("./api-football.server");
+
+  // 1. Pull currently live WC fixtures
+  const liveFx = await apiFootball.liveFixtures();
+
+  // 2. Also re-pull any match that DB still thinks is live but API may have finished
+  const { data: dbLive } = await supabaseAdmin
+    .from("matches")
+    .select("id")
+    .eq("status", "live");
+  const liveIds = new Set<number>([
+    ...liveFx.map((f) => f.fixture.id),
+    ...(dbLive ?? []).map((m) => m.id),
+  ]);
+
+  // 3. Fetch per-fixture detail for accuracy on the ones DB had as live but API didn't return
+  const extra: any[] = [];
+  for (const id of liveIds) {
+    if (liveFx.find((f) => f.fixture.id === id)) continue;
+    try {
+      const arr = await apiFootball.fixtureById(id);
+      if (arr[0]) extra.push(arr[0]);
+    } catch (e) {
+      console.warn("fixtureById failed", id, e);
+    }
+  }
+  const allFx = [...liveFx, ...extra];
+
+  let finished = 0;
+  if (allFx.length > 0) {
+    const rows = allFx.map((f: any) => {
+      const status = statusFromApi(f.fixture.status.short);
+      if (status === "finished") finished++;
+      return {
+        id: f.fixture.id,
+        external_id: String(f.fixture.id),
+        stage: stageFromRound(f.league.round),
+        home_team_id: f.teams.home.id,
+        away_team_id: f.teams.away.id,
+        kickoff_at: f.fixture.date,
+        stadium: f.fixture.venue?.name ?? null,
+        city: f.fixture.venue?.city ?? null,
+        status,
+        live_status: f.fixture.status.short ?? null,
+        home_score: f.goals.home,
+        away_score: f.goals.away,
+        home_score_ht: f.score?.halftime?.home ?? null,
+        away_score_ht: f.score?.halftime?.away ?? null,
+        minute: f.fixture.status.elapsed,
+      };
+    });
+    await (supabaseAdmin.from("matches") as any).upsert(rows, { onConflict: "id" });
+  }
+
+  // 4. Pull events for every live/just-finished match and upsert with dedup
+  let eventCount = 0;
+  for (const id of liveIds) {
+    try {
+      const events = await apiFootball.events(id);
+      if (!events?.length) continue;
+      const rows = events.map((e: any) => ({
+        match_id: id,
+        team_id: e.team?.id ?? null,
+        player_id: e.player?.id ?? null,
+        player_name: e.player?.name ?? null,
+        minute: e.time?.elapsed ?? null,
+        extra_time: e.time?.extra ?? null,
+        event_type: e.type ?? "Unknown",
+        detail: e.detail ?? null,
+      }));
+      // Dedup index makes upsert idempotent
+      const { error } = await (supabaseAdmin.from("match_events") as any).upsert(rows, {
+        onConflict:
+          "match_id,event_type,team_id,player_id,minute,extra_time,detail",
+        ignoreDuplicates: true,
+      });
+      if (error) {
+        // Fallback: ignore unique violation
+        if (!String(error.message).includes("duplicate")) console.warn("events upsert", error);
+      }
+      eventCount += rows.length;
+    } catch (e) {
+      console.warn("events fetch failed", id, e);
+    }
+  }
+
+  // 5. If anything just finished, recalc scoring (cheap: only finished matches)
+  if (finished > 0) {
+    await recalcAllScoresInternal();
+  }
+
+  return { matches: allFx.length, events: eventCount, finished };
+}
+
+export const refreshLiveMatches = createServerFn({ method: "POST" }).handler(async () => {
+  const result = await syncLiveMatchesInternal();
+  return result;
+});
+
 export const getStandings = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
@@ -377,6 +527,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
         stadium: f.fixture.venue?.name ?? null,
         city: f.fixture.venue?.city ?? null,
         status: statusFromApi(f.fixture.status.short),
+        live_status: f.fixture.status.short ?? null,
         home_score: f.goals.home,
         away_score: f.goals.away,
         home_score_ht: f.score?.halftime?.home ?? null,

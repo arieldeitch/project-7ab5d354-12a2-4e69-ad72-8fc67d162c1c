@@ -219,6 +219,7 @@ export type Database = {
           created_at: string
           detail: string | null
           event_type: string
+          extra_time: number | null
           id: number
           match_id: number
           minute: number | null
@@ -230,6 +231,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           event_type: string
+          extra_time?: number | null
           id?: number
           match_id: number
           minute?: number | null
@@ -241,6 +243,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           event_type?: string
+          extra_time?: number | null
           id?: number
           match_id?: number
           minute?: number | null
@@ -288,6 +291,7 @@ export type Database = {
           home_team_id: number | null
           id: number
           kickoff_at: string
+          live_status: string | null
           minute: number | null
           possession_away: number | null
           possession_home: number | null
@@ -317,6 +321,7 @@ export type Database = {
           home_team_id?: number | null
           id: number
           kickoff_at: string
+          live_status?: string | null
           minute?: number | null
           possession_away?: number | null
           possession_home?: number | null
@@ -346,6 +351,7 @@ export type Database = {
           home_team_id?: number | null
           id?: number
           kickoff_at?: string
+          live_status?: string | null
           minute?: number | null
           possession_away?: number | null
           possession_home?: number | null

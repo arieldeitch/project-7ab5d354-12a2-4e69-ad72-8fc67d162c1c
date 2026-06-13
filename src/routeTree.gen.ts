@@ -20,6 +20,7 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as BracketRouteImport } from './routes/bracket'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicHooksRefreshLiveRouteImport } from './routes/api/public/hooks/refresh-live'
 import { Route as ApiPublicHooksRefreshRouteImport } from './routes/api/public/hooks/refresh'
 
 const TournamentRoute = TournamentRouteImport.update({
@@ -77,6 +78,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksRefreshLiveRoute =
+  ApiPublicHooksRefreshLiveRouteImport.update({
+    id: '/api/public/hooks/refresh-live',
+    path: '/api/public/hooks/refresh-live',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksRefreshRoute = ApiPublicHooksRefreshRouteImport.update({
   id: '/api/public/hooks/refresh',
   path: '/api/public/hooks/refresh',
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tournament': typeof TournamentRoute
   '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
+  '/api/public/hooks/refresh-live': typeof ApiPublicHooksRefreshLiveRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +118,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tournament': typeof TournamentRoute
   '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
+  '/api/public/hooks/refresh-live': typeof ApiPublicHooksRefreshLiveRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +134,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tournament': typeof TournamentRoute
   '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
+  '/api/public/hooks/refresh-live': typeof ApiPublicHooksRefreshLiveRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/tournament'
     | '/api/public/hooks/refresh'
+    | '/api/public/hooks/refresh-live'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/tournament'
     | '/api/public/hooks/refresh'
+    | '/api/public/hooks/refresh-live'
   id:
     | '__root__'
     | '/'
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/tournament'
     | '/api/public/hooks/refresh'
+    | '/api/public/hooks/refresh-live'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +197,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TournamentRoute: typeof TournamentRoute
   ApiPublicHooksRefreshRoute: typeof ApiPublicHooksRefreshRoute
+  ApiPublicHooksRefreshLiveRoute: typeof ApiPublicHooksRefreshLiveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,6 +279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/refresh-live': {
+      id: '/api/public/hooks/refresh-live'
+      path: '/api/public/hooks/refresh-live'
+      fullPath: '/api/public/hooks/refresh-live'
+      preLoaderRoute: typeof ApiPublicHooksRefreshLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/refresh': {
       id: '/api/public/hooks/refresh'
       path: '/api/public/hooks/refresh'
@@ -288,6 +309,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TournamentRoute: TournamentRoute,
   ApiPublicHooksRefreshRoute: ApiPublicHooksRefreshRoute,
+  ApiPublicHooksRefreshLiveRoute: ApiPublicHooksRefreshLiveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

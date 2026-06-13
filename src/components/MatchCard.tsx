@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { TeamBadge } from "@/components/TeamBadge";
 import { teamLabel } from "@/lib/team-names";
+import { liveStatusLabelHe } from "@/lib/event-labels";
 
 type Team = { id: number; name: string; name_he?: string | null; flag_url?: string | null; logo_url?: string | null; code?: string | null };
 
@@ -13,6 +14,7 @@ export type MatchRow = {
   stadium?: string | null;
   city?: string | null;
   minute?: number | null;
+  live_status?: string | null;
   stage?: string;
   home_team?: Team | null;
   away_team?: Team | null;
@@ -61,6 +63,8 @@ export function MatchCard({
   highlight?: boolean;
 }) {
   const isLive = match.status === "live";
+  const liveLabel = liveStatusLabelHe(match.live_status);
+  const isHT = (match.live_status ?? "").toUpperCase() === "HT";
   const isFinished = match.status === "finished";
   const isScheduled = match.status === "scheduled";
   const hs = match.home_score ?? 0;
@@ -83,10 +87,17 @@ export function MatchCard({
       <div className="flex items-center justify-between mb-3 text-xs">
         <span className="text-muted-foreground">{fmtDate(match.kickoff_at)}</span>
         {isLive ? (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-bold">
-            <span className="h-2 w-2 rounded-full bg-current animate-pulse" />
-            LIVE {match.minute ? `${match.minute}'` : ""}
-          </span>
+          isHT ? (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gold text-gold-foreground font-bold">
+              ⏱️ מחצית
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-bold">
+              <span className="h-2 w-2 rounded-full bg-current animate-pulse" />
+              LIVE {match.minute ? `${match.minute}'` : ""}
+              {liveLabel && !isHT ? ` · ${liveLabel}` : ""}
+            </span>
+          )
         ) : isFinished ? (
           <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-bold">הסתיים</span>
         ) : (

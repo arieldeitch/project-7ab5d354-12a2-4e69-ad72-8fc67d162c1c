@@ -39,6 +39,7 @@ export const Route = createFileRoute("/api/public/hooks/refresh")({
                 stadium: f.fixture.venue?.name ?? null,
                 city: f.fixture.venue?.city ?? null,
                 status: statusFromApi(f.fixture.status.short),
+                live_status: f.fixture.status.short ?? null,
                 home_score: f.goals.home,
                 away_score: f.goals.away,
                 minute: f.fixture.status.elapsed,
