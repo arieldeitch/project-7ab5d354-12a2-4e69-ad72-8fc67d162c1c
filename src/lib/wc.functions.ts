@@ -145,6 +145,19 @@ export const getMatchesByStage = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+export const getFinishedMatches = createServerFn({ method: "GET" })
+  .inputValidator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("matches")
+      .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
+      .eq("status", "finished")
+      .order("kickoff_at", { ascending: false })
+      .limit(data.limit ?? 20);
+    return rows ?? [];
+  });
+
 export const getStandings = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
