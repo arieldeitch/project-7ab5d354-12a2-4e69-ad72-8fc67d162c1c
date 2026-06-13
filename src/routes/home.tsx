@@ -20,7 +20,7 @@ import { usePlayer, PLAYER_META } from "@/lib/player-context";
 import { toast } from "sonner";
 import { eventIcon, eventLabelHe, formatMinute } from "@/lib/event-labels";
 import { teamLabel } from "@/lib/team-names";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/home")({
   head: () => ({ meta: [{ title: "המשחקים של היום · אתגר המונדיאל" }] }),
@@ -91,6 +91,12 @@ function Home() {
     (upcoming.data?.length ?? 0) === 0 &&
     (finished.data?.length ?? 0) === 0 &&
     !hasLive;
+
+  type MatchTab = "today" | "results" | "upcoming";
+  const [tab, setTab] = useState<MatchTab>("today");
+  const todayCount = (today.data?.length ?? 0) + (hasLive ? live.data!.length : 0);
+  const resultsCount = finished.data?.length ?? 0;
+  const upcomingCount = upcoming.data?.length ?? 0;
 
   const runRefresh = async () => {
     toast.loading("מרענן נתוני מונדיאל...", { id: "ref" });
@@ -170,7 +176,7 @@ function Home() {
                       {e.team ? ` · ${teamLabel(e.team)}` : ""}
                     </div>
                     <div className="text-[11px] text-muted-foreground truncate">
-                      {eventLabelHe(e)} · {ht} {m?.home_score ?? "-"}:{m?.away_score ?? "-"} {at}
+                      {eventLabelHe(e)} · {ht} <span dir="ltr">{m?.home_score ?? "-"}:{m?.away_score ?? "-"}</span> {at}
                     </div>
                   </div>
                   <span className="text-xs font-black text-gold tabular-nums shrink-0">
@@ -183,66 +189,119 @@ function Home() {
         </Section>
       )}
 
-      <Section title="🔥 משחקים היום">
-        {today.isLoading ? (
-          <SkeletonCards />
-        ) : (today.data?.length ?? 0) === 0 ? (
-          <EmptyState text="אין משחקים היום. תסתכלו על המשחקים הקרובים למטה!" />
-        ) : (
-          <div className="space-y-3">
-            {today.data!.map((m: any) => {
-              const pred = predByMatch.get(m.id);
-              return (
-                <MatchCard
-                  key={m.id}
-                  match={m}
-                  footer={
-                    <Link
-                      to="/predictions"
-                      search={{ matchId: m.id } as any}
-                      className="flex items-center justify-between w-full text-xs"
-                    >
-                      <CountdownBadge kickoff={m.kickoff_at} />
-                      <span
-                        className={
-                          "px-3 py-1.5 rounded-lg font-bold " +
-                          (pred ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")
-                        }
+      <section className="mb-6">
+        <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+          {([
+            { id: "today", label: "🔥 משחקי היום", count: todayCount },
+            { id: "results", label: "🏁 תוצאות", count: resultsCount },
+            { id: "upcoming", label: "📅 משחקים עתידיים", count: upcomingCount },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={
+                "px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition flex items-center gap-1.5 " +
+                (tab === t.id ? "trophy-glow" : "bg-card border border-border")
+              }
+            >
+              <span>{t.label}</span>
+              <span className={"text-[10px] tabular-nums px-1.5 py-0.5 rounded-full " + (tab === t.id ? "bg-background/30" : "bg-muted text-muted-foreground")}>
+                {t.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {tab === "today" && (
+          today.isLoading ? (
+            <SkeletonCards />
+          ) : todayCount === 0 ? (
+            <EmptyState text="אין משחקים היום. עברו לטאב 'משחקים עתידיים' לראות מה מחכה!" />
+          ) : (
+            <div className="space-y-3">
+              {today.data!.map((m: any) => {
+                const pred = predByMatch.get(m.id);
+                return (
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    footer={
+                      m.status === "scheduled" ? (
+                        <Link
+                          to="/predictions"
+                          search={{ matchId: m.id } as any}
+                          className="flex items-center justify-between w-full text-xs"
+                        >
+                          <CountdownBadge kickoff={m.kickoff_at} />
+                          <span
+                            className={
+                              "px-3 py-1.5 rounded-lg font-bold " +
+                              (pred ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")
+                            }
+                          >
+                            {pred ? "✓ תחזית נמסרה — ערוך" : "📝 הוסף תחזית"}
+                          </span>
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                );
+              })}
+            </div>
+          )
+        )}
+
+        {tab === "results" && (
+          finished.isLoading ? (
+            <SkeletonCards />
+          ) : resultsCount === 0 ? (
+            <EmptyState text="עוד לא הסתיימו משחקים. תכף תתחיל הפעולה!" />
+          ) : (
+            <div className="space-y-3">
+              {finished.data!.map((m: any) => (
+                <MatchCard key={m.id} match={m} />
+              ))}
+            </div>
+          )
+        )}
+
+        {tab === "upcoming" && (
+          upcoming.isLoading ? (
+            <SkeletonCards />
+          ) : upcomingCount === 0 ? (
+            <EmptyState text="כרגע אין משחקים עתידיים מתוזמנים." />
+          ) : (
+            <div className="space-y-3">
+              {upcoming.data!.map((m: any) => {
+                const pred = predByMatch.get(m.id);
+                return (
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    footer={
+                      <Link
+                        to="/predictions"
+                        search={{ matchId: m.id } as any}
+                        className="flex items-center justify-between w-full text-xs"
                       >
-                        {pred ? "✓ תחזית נמסרה — ערוך" : "📝 הוסף תחזית"}
-                      </span>
-                    </Link>
-                  }
-                />
-              );
-            })}
-          </div>
+                        <CountdownBadge kickoff={m.kickoff_at} />
+                        <span
+                          className={
+                            "px-3 py-1.5 rounded-lg font-bold " +
+                            (pred ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")
+                          }
+                        >
+                          {pred ? "✓ תחזית נמסרה — ערוך" : "📝 הוסף תחזית"}
+                        </span>
+                      </Link>
+                    }
+                  />
+                );
+              })}
+            </div>
+          )
         )}
-      </Section>
-
-      <Section title="⏭️ הקרובים בתור">
-        {upcoming.isLoading ? (
-          <SkeletonCards />
-        ) : (upcoming.data?.length ?? 0) === 0 ? (
-          <EmptyState text="כעת אין משחקים קרובים. תכף יתחילו עוד משחקים מרגשים!" />
-        ) : (
-          <div className="space-y-3">
-            {upcoming.data!.slice(0, 5).map((m: any) => (
-              <MatchCard key={m.id} match={m} />
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {(finished.data?.length ?? 0) > 0 && (
-        <Section title="🏁 תוצאות אחרונות">
-          <div className="space-y-3">
-            {finished.data!.slice(0, 6).map((m: any) => (
-              <MatchCard key={m.id} match={m} />
-            ))}
-          </div>
-        </Section>
-      )}
+      </section>
 
       <Section title="🏅 טבלת האליפות">
         <div className="card-stadium p-3 divide-y divide-border">
