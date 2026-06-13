@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { TeamBadge } from "@/components/TeamBadge";
+import { teamLabel } from "@/lib/team-names";
 
-type T = { id: number; name: string; name_he?: string | null; flag_url?: string | null; logo_url?: string | null };
+type T = { id: number; name: string; name_he?: string | null; code?: string | null; flag_url?: string | null; logo_url?: string | null };
 
 export function TeamPicker({
   teams,
@@ -13,7 +15,11 @@ export function TeamPicker({
 }) {
   const [q, setQ] = useState("");
   const filtered = q
-    ? teams.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()) || (t.name_he ?? "").includes(q))
+    ? teams.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q.toLowerCase()) ||
+          teamLabel(t).includes(q),
+      )
     : teams;
   return (
     <div>
@@ -35,15 +41,9 @@ export function TeamPicker({
                 (sel ? "ring-2 ring-secondary scale-105 animate-pop-in" : "hover:scale-105")
               }
             >
-              <div className="h-10 w-10 rounded-full overflow-hidden bg-muted">
-                {t.flag_url || t.logo_url ? (
-                  <img src={t.flag_url ?? t.logo_url ?? ""} alt={t.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-xl grid place-items-center h-full">🏳️</span>
-                )}
-              </div>
+              <TeamBadge team={t} size={40} />
               <span className="text-[11px] font-bold text-center truncate w-full">
-                {t.name_he ?? t.name}
+                {teamLabel(t)}
               </span>
             </button>
           );

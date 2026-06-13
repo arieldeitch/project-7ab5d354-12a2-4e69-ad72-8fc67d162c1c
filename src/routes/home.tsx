@@ -8,6 +8,7 @@ import {
   getMyPredictions,
   refreshWorldCupData,
   getMyProfile,
+  getFinishedMatches,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
@@ -33,16 +34,22 @@ function Home() {
   const predsFn = useServerFn(getMyPredictions);
   const profileFn = useServerFn(getMyProfile);
   const refreshFn = useServerFn(refreshWorldCupData);
+  const finishedFn = useServerFn(getFinishedMatches);
 
   const today = useQuery({ queryKey: ["today"], queryFn: () => todayFn() });
   const upcoming = useQuery({ queryKey: ["upcoming"], queryFn: () => upcomingFn({ data: { limit: 5 } }) });
+  const finished = useQuery({ queryKey: ["finished", 6], queryFn: () => finishedFn({ data: { limit: 6 } }) });
   const lb = useQuery({ queryKey: ["lb"], queryFn: () => lbFn() });
   const preds = useQuery({ queryKey: ["preds", active], queryFn: () => predsFn({ data: { playerName: active! } }) });
   const profile = useQuery({ queryKey: ["profile", active], queryFn: () => profileFn({ data: { name: active! } }) });
 
   const predByMatch = new Map((preds.data ?? []).map((p) => [p.match_id, p]));
 
-  const noData = !today.isLoading && (today.data?.length ?? 0) === 0 && (upcoming.data?.length ?? 0) === 0;
+  const noData =
+    !today.isLoading &&
+    (today.data?.length ?? 0) === 0 &&
+    (upcoming.data?.length ?? 0) === 0 &&
+    (finished.data?.length ?? 0) === 0;
 
   const runRefresh = async () => {
     toast.loading("מרענן נתוני מונדיאל...", { id: "ref" });
@@ -130,7 +137,7 @@ function Home() {
         {upcoming.isLoading ? (
           <SkeletonCards />
         ) : (upcoming.data?.length ?? 0) === 0 ? (
-          <EmptyState text="אין משחקים קרובים זמינים." />
+          <EmptyState text="כעת אין משחקים קרובים. תכף יתחילו עוד משחקים מרגשים!" />
         ) : (
           <div className="space-y-3">
             {upcoming.data!.slice(0, 5).map((m: any) => (
@@ -139,6 +146,16 @@ function Home() {
           </div>
         )}
       </Section>
+
+      {(finished.data?.length ?? 0) > 0 && (
+        <Section title="🏁 תוצאות אחרונות">
+          <div className="space-y-3">
+            {finished.data!.slice(0, 6).map((m: any) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="🏅 טבלת האליפות">
         <div className="card-stadium p-3 divide-y divide-border">

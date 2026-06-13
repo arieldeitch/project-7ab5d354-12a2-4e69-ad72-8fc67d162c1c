@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { TeamBadge } from "@/components/TeamBadge";
+import { teamLabel } from "@/lib/team-names";
 
 type Team = { id: number; name: string; name_he?: string | null; flag_url?: string | null; logo_url?: string | null; code?: string | null };
 
@@ -25,18 +27,23 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("he-IL", { weekday: "short", day: "numeric", month: "short" }).format(d);
 }
 
-function TeamSide({ team }: { team?: Team | null }) {
+function TeamSide({ team, winner, loser }: { team?: Team | null; winner?: boolean; loser?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-2 min-w-0 flex-1">
-      <div className="h-14 w-14 rounded-full bg-card border-2 border-border overflow-hidden flex items-center justify-center text-2xl">
-        {team?.flag_url || team?.logo_url ? (
-          <img src={team.flag_url ?? team.logo_url ?? ""} alt={team?.name ?? ""} className="h-full w-full object-cover" />
-        ) : (
-          <span>🏳️</span>
+      <div className={"relative " + (winner ? "drop-shadow-[0_0_8px_var(--gold)]" : "")}>
+        <TeamBadge team={team} size={56} />
+        {winner && (
+          <span className="absolute -top-1 -right-1 text-base leading-none">🏆</span>
         )}
       </div>
-      <div className="text-sm font-bold text-center truncate w-full" title={team?.name}>
-        {team?.name_he ?? team?.name ?? "—"}
+      <div
+        className={
+          "text-sm text-center w-full truncate " +
+          (winner ? "font-black text-gold" : loser ? "font-bold text-muted-foreground" : "font-bold")
+        }
+        title={teamLabel(team)}
+      >
+        {teamLabel(team)}
       </div>
     </div>
   );
@@ -56,6 +63,11 @@ export function MatchCard({
   const isLive = match.status === "live";
   const isFinished = match.status === "finished";
   const isScheduled = match.status === "scheduled";
+  const hs = match.home_score ?? 0;
+  const as = match.away_score ?? 0;
+  const homeWon = isFinished && hs > as;
+  const awayWon = isFinished && as > hs;
+  const isDraw = isFinished && hs === as;
 
   return (
     <div
@@ -64,7 +76,8 @@ export function MatchCard({
         "card-stadium p-4 transition-all " +
         (onClick ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98] " : "") +
         (highlight ? "ring-2 ring-secondary animate-shimmer-gold " : "") +
-        (isLive ? "border-accent " : "")
+        (isLive ? "border-accent ring-1 ring-accent/60 " : "") +
+        (isFinished ? "bg-card/60 " : "")
       }
     >
       <div className="flex items-center justify-between mb-3 text-xs">
@@ -82,19 +95,22 @@ export function MatchCard({
       </div>
 
       <div className="flex items-center gap-2">
-        <TeamSide team={match.home_team} />
-        <div className="flex flex-col items-center min-w-[64px]">
+        <TeamSide team={match.home_team} winner={homeWon} loser={awayWon} />
+        <div className="flex flex-col items-center min-w-[72px]">
           {isScheduled ? (
             <span className="text-3xl font-extrabold text-muted-foreground">VS</span>
           ) : (
-            <div className="text-3xl font-black tabular-nums tracking-tighter text-gold">
-              {match.home_score ?? 0}
-              <span className="text-muted-foreground mx-1">-</span>
-              {match.away_score ?? 0}
-            </div>
+            <>
+              <div className="text-3xl font-black tabular-nums tracking-tighter text-gold">
+                {hs}
+                <span className="text-muted-foreground mx-1">-</span>
+                {as}
+              </div>
+              {isDraw && <span className="text-[10px] font-bold text-muted-foreground mt-0.5">תיקו</span>}
+            </>
           )}
         </div>
-        <TeamSide team={match.away_team} />
+        <TeamSide team={match.away_team} winner={awayWon} loser={homeWon} />
       </div>
 
       {match.stadium && (
