@@ -222,9 +222,7 @@ export const savePrediction = createServerFn({ method: "POST" })
       both_teams_score: data.both_teams_score ?? null,
       is_locked: false,
     };
-    const { error } = await supabaseAdmin
-      .from("predictions")
-      .upsert(payload, { onConflict: "player_id,match_id" });
+    const { error } = await (supabaseAdmin.from("predictions") as any).upsert(payload, { onConflict: "player_id,match_id" });
     if (error) throw error;
     return { ok: true };
   });
@@ -280,9 +278,7 @@ export const saveBracket = createServerFn({ method: "POST" })
     if (data.mvp_player_id !== undefined) payload.mvp_player_id = data.mvp_player_id;
     if (data.group_winners) payload.group_winners = data.group_winners;
     if (data.group_runners_up) payload.group_runners_up = data.group_runners_up;
-    const { error } = await supabaseAdmin
-      .from("bracket_predictions")
-      .upsert(payload, { onConflict: "player_id" });
+    const { error } = await (supabaseAdmin.from("bracket_predictions") as any).upsert(payload, { onConflict: "player_id" });
     if (error) throw error;
     return { ok: true };
   });
@@ -350,7 +346,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
         flag_url: t.team.code ? flagUrl(t.team.code) : (t.team.logo ?? null),
         logo_url: t.team.logo ?? null,
       }));
-      const { error } = await supabaseAdmin.from("teams").upsert(rows, { onConflict: "id" });
+      const { error } = await (supabaseAdmin.from("teams") as any).upsert(rows, { onConflict: "id" });
       if (error) throw error;
       teamsCount = rows.length;
     }
@@ -374,7 +370,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
         away_score_ht: f.score?.halftime?.away ?? null,
         minute: f.fixture.status.elapsed,
       }));
-      const { error } = await supabaseAdmin.from("matches").upsert(rows, { onConflict: "id" });
+      const { error } = await (supabaseAdmin.from("matches") as any).upsert(rows, { onConflict: "id" });
       if (error) throw error;
       fixturesCount = rows.length;
     }
@@ -402,12 +398,12 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
             points: t.points,
           });
           // Tag team with group too
-          await supabaseAdmin.from("teams").update({ group_code: groupCode }).eq("id", t.team.id);
+          await (supabaseAdmin.from("teams") as any).update({ group_code: groupCode }).eq("id", t.team.id);
         }
       }
       if (rows.length > 0) {
         await supabaseAdmin.from("standings").delete().in("group_code", Array.from(groupCodes));
-        const { error } = await supabaseAdmin.from("standings").insert(rows);
+        const { error } = await (supabaseAdmin.from("standings") as any).insert(rows);
         if (error) throw error;
         standingsCount = rows.length;
       }
@@ -425,7 +421,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
         nationality: s.player.nationality ?? null,
       }));
       if (rows.length > 0) {
-        await supabaseAdmin.from("football_players").upsert(rows, { onConflict: "id" });
+        await (supabaseAdmin.from("football_players") as any).upsert(rows, { onConflict: "id" });
         scorersCount = rows.length;
       }
     } catch (e) {
@@ -435,7 +431,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
     /* Recalculate scores */
     await recalcAllScoresInternal();
 
-    await supabaseAdmin.from("refresh_logs").insert({
+    await (supabaseAdmin.from("refresh_logs") as any).insert({
       kind: "full",
       status: "ok",
       detail: `teams:${teamsCount} fixtures:${fixturesCount} standings:${standingsCount} scorers:${scorersCount}`,
@@ -446,7 +442,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
     return { ok: true, teams: teamsCount, fixtures: fixturesCount, standings: standingsCount, scorers: scorersCount };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await supabaseAdmin.from("refresh_logs").insert({
+    await (supabaseAdmin.from("refresh_logs") as any).insert({
       kind: "full",
       status: "error",
       detail: msg.slice(0, 500),
@@ -508,7 +504,7 @@ async function recalcAllScoresInternal() {
         },
         cfg,
       );
-      await supabaseAdmin.from("prediction_scores").upsert(
+      await (supabaseAdmin.from("prediction_scores") as any).upsert(
         {
           prediction_id: p.id,
           player_id: p.player_id,
@@ -517,7 +513,7 @@ async function recalcAllScoresInternal() {
         },
         { onConflict: "prediction_id" },
       );
-      await supabaseAdmin.from("predictions").update({ is_locked: true }).eq("id", p.id);
+      await (supabaseAdmin.from("predictions") as any).update({ is_locked: true }).eq("id", p.id);
     }
   }
 
@@ -529,7 +525,7 @@ async function recalcAllScoresInternal() {
       .select("total_points")
       .eq("player_id", pl.id);
     const total = (rows ?? []).reduce((s, r) => s + (r.total_points ?? 0), 0);
-    await supabaseAdmin.from("players").update({ total_points: total }).eq("id", pl.id);
+    await (supabaseAdmin.from("players") as any).update({ total_points: total }).eq("id", pl.id);
   }
 }
 
