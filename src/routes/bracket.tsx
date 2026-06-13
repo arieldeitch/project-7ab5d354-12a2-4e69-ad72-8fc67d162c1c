@@ -131,10 +131,3 @@ function Bracket() {
     </AppShell>
   );
 }
-
-// Type compatibility
-type _Team = { id: number; name: string; name_he?: string | null };
-const _x: _Team[] = [];
-_x.length;
-const _xx: any = undefined;
-_xx?.t;
