@@ -112,10 +112,13 @@ export function MatchCard({
             <span className="text-3xl font-extrabold text-muted-foreground">VS</span>
           ) : (
             <>
-              <div className="text-3xl font-black tabular-nums tracking-tighter text-gold">
-                {hs}
+              <div
+                dir="ltr"
+                className="text-3xl font-black tabular-nums tracking-tighter text-gold whitespace-nowrap"
+              >
+                <span>{hs}</span>
                 <span className="text-muted-foreground mx-1">-</span>
-                {as}
+                <span>{as}</span>
               </div>
               {isDraw && <span className="text-[10px] font-bold text-muted-foreground mt-0.5">תיקו</span>}
             </>
