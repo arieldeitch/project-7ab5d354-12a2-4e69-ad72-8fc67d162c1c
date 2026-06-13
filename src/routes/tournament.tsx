@@ -1,8 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getStandings, getMatchesByStage, getFinishedMatches, getUpcomingMatches } from "@/lib/wc.functions";
+import {
+  getStandings,
+  getMatchesByStage,
+  getFinishedMatches,
+  getUpcomingMatches,
+  getMatchesByGroup,
+} from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
 import { MatchCard } from "@/components/MatchCard";
@@ -19,7 +25,8 @@ export const Route = createFileRoute("/tournament")({
 });
 
 const TABS = [
-  { id: "groups", label: "שלב הבתים" },
+  { id: "groups", label: "טבלאות בתים" },
+  { id: "group-view", label: "מרכז הבתים" },
   { id: "ko", label: "נוקאאוט" },
   { id: "trophy", label: "הגביע 🏆" },
 ] as const;
@@ -43,6 +50,7 @@ function Tournament() {
         ))}
       </div>
       {tab === "groups" && <Groups />}
+      {tab === "group-view" && <GroupCenter />}
       {tab === "ko" && <Knockout />}
       {tab === "trophy" && <TrophyPage />}
     </AppShell>
