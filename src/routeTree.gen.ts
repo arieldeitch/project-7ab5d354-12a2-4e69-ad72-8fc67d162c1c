@@ -9,38 +9,255 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TournamentRouteImport } from './routes/tournament'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SelectPlayerRouteImport } from './routes/select-player'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PredictionsRouteImport } from './routes/predictions'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as HomeRouteImport } from './routes/home'
+import { Route as BracketRouteImport } from './routes/bracket'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicHooksRefreshRouteImport } from './routes/api/public/hooks/refresh'
 
+const TournamentRoute = TournamentRouteImport.update({
+  id: '/tournament',
+  path: '/tournament',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelectPlayerRoute = SelectPlayerRouteImport.update({
+  id: '/select-player',
+  path: '/select-player',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PredictionsRoute = PredictionsRouteImport.update({
+  id: '/predictions',
+  path: '/predictions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BracketRoute = BracketRouteImport.update({
+  id: '/bracket',
+  path: '/bracket',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksRefreshRoute = ApiPublicHooksRefreshRouteImport.update({
+  id: '/api/public/hooks/refresh',
+  path: '/api/public/hooks/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/bracket': typeof BracketRoute
+  '/home': typeof HomeRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/predictions': typeof PredictionsRoute
+  '/profile': typeof ProfileRoute
+  '/select-player': typeof SelectPlayerRoute
+  '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tournament': typeof TournamentRoute
+  '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/bracket': typeof BracketRoute
+  '/home': typeof HomeRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/predictions': typeof PredictionsRoute
+  '/profile': typeof ProfileRoute
+  '/select-player': typeof SelectPlayerRoute
+  '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tournament': typeof TournamentRoute
+  '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/bracket': typeof BracketRoute
+  '/home': typeof HomeRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/predictions': typeof PredictionsRoute
+  '/profile': typeof ProfileRoute
+  '/select-player': typeof SelectPlayerRoute
+  '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tournament': typeof TournamentRoute
+  '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/bracket'
+    | '/home'
+    | '/leaderboard'
+    | '/predictions'
+    | '/profile'
+    | '/select-player'
+    | '/setup'
+    | '/sitemap.xml'
+    | '/tournament'
+    | '/api/public/hooks/refresh'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/admin'
+    | '/bracket'
+    | '/home'
+    | '/leaderboard'
+    | '/predictions'
+    | '/profile'
+    | '/select-player'
+    | '/setup'
+    | '/sitemap.xml'
+    | '/tournament'
+    | '/api/public/hooks/refresh'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/bracket'
+    | '/home'
+    | '/leaderboard'
+    | '/predictions'
+    | '/profile'
+    | '/select-player'
+    | '/setup'
+    | '/sitemap.xml'
+    | '/tournament'
+    | '/api/public/hooks/refresh'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  BracketRoute: typeof BracketRoute
+  HomeRoute: typeof HomeRoute
+  LeaderboardRoute: typeof LeaderboardRoute
+  PredictionsRoute: typeof PredictionsRoute
+  ProfileRoute: typeof ProfileRoute
+  SelectPlayerRoute: typeof SelectPlayerRoute
+  SetupRoute: typeof SetupRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TournamentRoute: typeof TournamentRoute
+  ApiPublicHooksRefreshRoute: typeof ApiPublicHooksRefreshRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tournament': {
+      id: '/tournament'
+      path: '/tournament'
+      fullPath: '/tournament'
+      preLoaderRoute: typeof TournamentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/select-player': {
+      id: '/select-player'
+      path: '/select-player'
+      fullPath: '/select-player'
+      preLoaderRoute: typeof SelectPlayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/predictions': {
+      id: '/predictions'
+      path: '/predictions'
+      fullPath: '/predictions'
+      preLoaderRoute: typeof PredictionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bracket': {
+      id: '/bracket'
+      path: '/bracket'
+      fullPath: '/bracket'
+      preLoaderRoute: typeof BracketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +265,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/refresh': {
+      id: '/api/public/hooks/refresh'
+      path: '/api/public/hooks/refresh'
+      fullPath: '/api/public/hooks/refresh'
+      preLoaderRoute: typeof ApiPublicHooksRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  BracketRoute: BracketRoute,
+  HomeRoute: HomeRoute,
+  LeaderboardRoute: LeaderboardRoute,
+  PredictionsRoute: PredictionsRoute,
+  ProfileRoute: ProfileRoute,
+  SelectPlayerRoute: SelectPlayerRoute,
+  SetupRoute: SetupRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TournamentRoute: TournamentRoute,
+  ApiPublicHooksRefreshRoute: ApiPublicHooksRefreshRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
