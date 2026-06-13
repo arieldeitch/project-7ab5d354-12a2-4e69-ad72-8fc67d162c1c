@@ -13,6 +13,7 @@ import { Route as TournamentRouteImport } from './routes/tournament'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SelectPlayerRouteImport } from './routes/select-player'
 import { Route as PredictionsRouteImport } from './routes/predictions'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as BracketRouteImport } from './routes/bracket'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,11 @@ const PredictionsRoute = PredictionsRouteImport.update({
   path: '/predictions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HomeRoute = HomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/bracket'
     | '/home'
+    | '/leaderboard'
     | '/predictions'
     | '/select-player'
     | '/setup'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/bracket'
     | '/home'
+    | '/leaderboard'
     | '/predictions'
     | '/select-player'
     | '/setup'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/bracket'
     | '/home'
+    | '/leaderboard'
     | '/predictions'
     | '/select-player'
     | '/setup'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BracketRoute: typeof BracketRoute
   HomeRoute: typeof HomeRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   PredictionsRoute: typeof PredictionsRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
   SetupRoute: typeof SetupRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PredictionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/home': {
       id: '/home'
       path: '/home'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BracketRoute: BracketRoute,
   HomeRoute: HomeRoute,
+  LeaderboardRoute: LeaderboardRoute,
   PredictionsRoute: PredictionsRoute,
   SelectPlayerRoute: SelectPlayerRoute,
   SetupRoute: SetupRoute,
@@ -187,3 +208,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
