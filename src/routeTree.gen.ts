@@ -14,6 +14,7 @@ import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SelectPlayerRouteImport } from './routes/select-player'
 import { Route as PredictionsRouteImport } from './routes/predictions'
 import { Route as HomeRouteImport } from './routes/home'
+import { Route as BracketRouteImport } from './routes/bracket'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TournamentRoute = TournamentRouteImport.update({
@@ -41,6 +42,11 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BracketRoute = BracketRouteImport.update({
+  id: '/bracket',
+  path: '/bracket',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,6 +55,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/bracket'
     | '/home'
     | '/predictions'
     | '/select-player'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/bracket'
     | '/home'
     | '/predictions'
     | '/select-player'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/bracket'
     | '/home'
     | '/predictions'
     | '/select-player'
@@ -101,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BracketRoute: typeof BracketRoute
   HomeRoute: typeof HomeRoute
   PredictionsRoute: typeof PredictionsRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bracket': {
+      id: '/bracket'
+      path: '/bracket'
+      fullPath: '/bracket'
+      preLoaderRoute: typeof BracketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -157,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BracketRoute: BracketRoute,
   HomeRoute: HomeRoute,
   PredictionsRoute: PredictionsRoute,
   SelectPlayerRoute: SelectPlayerRoute,
