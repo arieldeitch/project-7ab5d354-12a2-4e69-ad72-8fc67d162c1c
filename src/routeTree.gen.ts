@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TournamentRouteImport } from './routes/tournament'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SelectPlayerRouteImport } from './routes/select-player'
 import { Route as PredictionsRouteImport } from './routes/predictions'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TournamentRoute = TournamentRouteImport.update({
+  id: '/tournament',
+  path: '/tournament',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
+  '/tournament': typeof TournamentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
+  '/tournament': typeof TournamentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/predictions': typeof PredictionsRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
+  '/tournament': typeof TournamentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/predictions' | '/select-player' | '/setup'
+  fullPaths:
+    | '/'
+    | '/home'
+    | '/predictions'
+    | '/select-player'
+    | '/setup'
+    | '/tournament'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/predictions' | '/select-player' | '/setup'
-  id: '__root__' | '/' | '/home' | '/predictions' | '/select-player' | '/setup'
+  to:
+    | '/'
+    | '/home'
+    | '/predictions'
+    | '/select-player'
+    | '/setup'
+    | '/tournament'
+  id:
+    | '__root__'
+    | '/'
+    | '/home'
+    | '/predictions'
+    | '/select-player'
+    | '/setup'
+    | '/tournament'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +105,18 @@ export interface RootRouteChildren {
   PredictionsRoute: typeof PredictionsRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
   SetupRoute: typeof SetupRoute
+  TournamentRoute: typeof TournamentRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tournament': {
+      id: '/tournament'
+      path: '/tournament'
+      fullPath: '/tournament'
+      preLoaderRoute: typeof TournamentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   PredictionsRoute: PredictionsRoute,
   SelectPlayerRoute: SelectPlayerRoute,
   SetupRoute: SetupRoute,
+  TournamentRoute: TournamentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
