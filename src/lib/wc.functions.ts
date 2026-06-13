@@ -75,7 +75,8 @@ export const updatePlayerProfile = createServerFn({ method: "POST" })
     const patch: Record<string, number | null> = {};
     if (data.favorite_team_id !== undefined) patch.favorite_team_id = data.favorite_team_id;
     if (data.favorite_player_id !== undefined) patch.favorite_player_id = data.favorite_player_id;
-    const { error } = await supabaseAdmin.from("players").update(patch).eq("name", data.name);
+    const sb = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { error } = await sb.from("players").update(patch).eq("name", data.name);
     if (error) throw error;
     return { ok: true };
   });
