@@ -1,7 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { usePlayer, PLAYER_META } from "@/lib/player-context";
-import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyProfile } from "@/lib/wc.functions";
 
@@ -60,6 +58,3 @@ function SelectPlayer() {
     </div>
   );
 }
-
-// silence unused warning
-useEffect;
