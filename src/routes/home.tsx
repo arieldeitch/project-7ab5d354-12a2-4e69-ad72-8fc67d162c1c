@@ -280,7 +280,7 @@ function StatPill({ label, value, accent }: { label: string; value: number; acce
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mb-6">
       <h2 className="text-lg font-black mb-3 flex items-center gap-2">{title}</h2>
