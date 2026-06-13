@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TournamentRouteImport } from './routes/tournament'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SelectPlayerRouteImport } from './routes/select-player'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PredictionsRouteImport } from './routes/predictions'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as HomeRouteImport } from './routes/home'
@@ -31,6 +32,11 @@ const SetupRoute = SetupRouteImport.update({
 const SelectPlayerRoute = SelectPlayerRouteImport.update({
   id: '/select-player',
   path: '/select-player',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PredictionsRoute = PredictionsRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
   '/predictions': typeof PredictionsRoute
+  '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
   '/tournament': typeof TournamentRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
   '/predictions': typeof PredictionsRoute
+  '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
   '/tournament': typeof TournamentRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
   '/predictions': typeof PredictionsRoute
+  '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
   '/tournament': typeof TournamentRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/leaderboard'
     | '/predictions'
+    | '/profile'
     | '/select-player'
     | '/setup'
     | '/tournament'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/leaderboard'
     | '/predictions'
+    | '/profile'
     | '/select-player'
     | '/setup'
     | '/tournament'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/leaderboard'
     | '/predictions'
+    | '/profile'
     | '/select-player'
     | '/setup'
     | '/tournament'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LeaderboardRoute: typeof LeaderboardRoute
   PredictionsRoute: typeof PredictionsRoute
+  ProfileRoute: typeof ProfileRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
   SetupRoute: typeof SetupRoute
   TournamentRoute: typeof TournamentRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/select-player'
       fullPath: '/select-player'
       preLoaderRoute: typeof SelectPlayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/predictions': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LeaderboardRoute: LeaderboardRoute,
   PredictionsRoute: PredictionsRoute,
+  ProfileRoute: ProfileRoute,
   SelectPlayerRoute: SelectPlayerRoute,
   SetupRoute: SetupRoute,
   TournamentRoute: TournamentRoute,
