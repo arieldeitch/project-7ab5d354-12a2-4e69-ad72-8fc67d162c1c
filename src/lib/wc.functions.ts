@@ -137,7 +137,7 @@ export const getMatchesByStage = createServerFn({ method: "GET" })
   .inputValidator((d: { stage: string }) => z.object({ stage: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows } = await supabaseAdmin
+    const { data: rows } = await (supabaseAdmin as any)
       .from("matches")
       .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
       .eq("stage", data.stage)
