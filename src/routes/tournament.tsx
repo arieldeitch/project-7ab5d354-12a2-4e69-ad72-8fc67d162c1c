@@ -2,10 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getStandings, getMatchesByStage } from "@/lib/wc.functions";
+import { getStandings, getMatchesByStage, getFinishedMatches, getUpcomingMatches } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
 import { MatchCard } from "@/components/MatchCard";
+import { TeamBadge } from "@/components/TeamBadge";
+import { teamLabel } from "@/lib/team-names";
 
 export const Route = createFileRoute("/tournament")({
   head: () => ({ meta: [{ title: "הטורניר · אתגר המונדיאל" }] }),
@@ -49,7 +51,11 @@ function Tournament() {
 
 function Groups() {
   const fn = useServerFn(getStandings);
+  const finishedFn = useServerFn(getFinishedMatches);
+  const upcomingFn = useServerFn(getUpcomingMatches);
   const q = useQuery({ queryKey: ["standings"], queryFn: () => fn() });
+  const finished = useQuery({ queryKey: ["finished", 10], queryFn: () => finishedFn({ data: { limit: 10 } }) });
+  const upcoming = useQuery({ queryKey: ["upcoming", 8], queryFn: () => upcomingFn({ data: { limit: 8 } }) });
   const byGroup = new Map<string, any[]>();
   for (const s of q.data ?? []) {
     if (!byGroup.has(s.group_code)) byGroup.set(s.group_code, []);
@@ -58,40 +64,82 @@ function Groups() {
   if (q.isLoading) {
     return <div className="card-stadium h-64 animate-pulse" />;
   }
-  if (byGroup.size === 0) {
-    return (
-      <div className="card-stadium p-6 text-center text-sm text-muted-foreground">
-        ⚽ עוד אין נתוני דירוג. הם יעודכנו אוטומטית כשהמשחקים יתחילו.
-      </div>
-    );
-  }
+  const hasStandings = byGroup.size > 0;
   return (
-    <div className="grid sm:grid-cols-2 gap-3">
-      {Array.from(byGroup.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([code, rows]) => (
-          <div key={code} className="card-stadium p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-black text-gold text-lg">בית {code}</h3>
-              <span className="text-[10px] text-muted-foreground">משחקים · נק׳</span>
-            </div>
-            <div className="divide-y divide-border">
-              {rows.map((r) => (
-                <div key={r.team_id} className="flex items-center gap-2 py-1.5">
-                  <span className="w-5 text-center text-xs font-bold text-muted-foreground">{r.rank}</span>
-                  <img
-                    src={r.team?.flag_url ?? r.team?.logo_url ?? ""}
-                    alt=""
-                    className="h-6 w-6 rounded-full object-cover bg-muted"
-                  />
-                  <span className="flex-1 text-sm font-bold truncate">{r.team?.name_he ?? r.team?.name}</span>
-                  <span className="text-xs tabular-nums text-muted-foreground">{r.played}</span>
-                  <span className="text-sm font-black tabular-nums text-gold w-7 text-left">{r.points}</span>
+    <div className="space-y-5">
+      {hasStandings ? (
+        <>
+          <div className="card-stadium p-3 text-[11px] text-muted-foreground flex items-center justify-center gap-3 flex-wrap">
+            <span>🟢 מעפילה כרגע</span>
+            <span>🟡 במאבק על העלייה</span>
+            <span>🔴 מחוץ לתמונה</span>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {Array.from(byGroup.entries())
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([code, rows]) => (
+                <div key={code} className="card-stadium p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-black text-gold text-lg">בית {code}</h3>
+                    <span className="text-[10px] text-muted-foreground">מש׳ · נצ׳ · תק׳ · הפ׳ · שע׳ · סע׳ · הפר׳ · נק׳</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {rows.map((r) => {
+                      const dot = r.rank <= 2 ? "🟢" : r.rank === 3 ? "🟡" : "🔴";
+                      return (
+                        <div key={r.team_id} className="grid grid-cols-[auto_auto_minmax(0,1fr)_repeat(7,auto)] items-center gap-1.5 py-1.5 text-[11px]">
+                          <span className="w-4 text-center font-bold text-muted-foreground">{r.rank}</span>
+                          <span className="text-xs leading-none">{dot}</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <TeamBadge team={r.team} size={22} className="border" />
+                            <span className="text-xs font-bold truncate">{teamLabel(r.team)}</span>
+                          </div>
+                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.played}</span>
+                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
+                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
+                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
+                          <span className="tabular-nums text-muted-foreground w-6 text-center">{r.goals_for}</span>
+                          <span className="tabular-nums text-muted-foreground w-6 text-center">{r.goals_against}</span>
+                          <span className="tabular-nums font-black text-gold w-7 text-center">{r.points}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
-            </div>
           </div>
-        ))}
+        </>
+      ) : (
+        <div className="card-stadium p-5 text-center">
+          <div className="text-4xl mb-2">⚽</div>
+          <h3 className="font-black mb-1">דירוג הבתים בדרך</h3>
+          <p className="text-sm text-muted-foreground">
+            הטבלאות יתעדכנו אוטומטית עם תחילת המשחקים. בינתיים — הנה כל מה שכבר קרה ומה שיהיה.
+          </p>
+        </div>
+      )}
+
+      {(finished.data?.length ?? 0) > 0 && (
+        <div>
+          <h3 className="text-lg font-black text-gold mb-2">🏁 תוצאות אחרונות</h3>
+          <div className="space-y-2">
+            {finished.data!.slice(0, 6).map((m: any) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(upcoming.data?.length ?? 0) > 0 && (
+        <div>
+          <h3 className="text-lg font-black text-gold mb-2">⏭️ המשחקים הבאים</h3>
+          <div className="space-y-2">
+            {upcoming.data!.slice(0, 6).map((m: any) => (
+              <MatchCard key={m.id} match={m} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
