@@ -12,6 +12,7 @@ import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
 import { MatchCard, CountdownBadge } from "@/components/MatchCard";
 import { usePlayer } from "@/lib/player-context";
+import { teamLabel } from "@/lib/team-names";
 import { toast } from "sonner";
 import { Confetti } from "@/components/Confetti";
 
