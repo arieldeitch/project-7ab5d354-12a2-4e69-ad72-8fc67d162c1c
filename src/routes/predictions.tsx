@@ -140,7 +140,12 @@ function PredictionForm({
         <div className="text-sm font-bold mb-2">מי ינצח?</div>
         <div className="grid grid-cols-3 gap-2">
           {(["home", "draw", "away"] as const).map((w) => {
-            const label = w === "home" ? match.home_team?.name_he ?? match.home_team?.name : w === "away" ? match.away_team?.name_he ?? match.away_team?.name : "תיקו";
+            const label =
+              w === "home"
+                ? teamLabel(match.home_team)
+                : w === "away"
+                  ? teamLabel(match.away_team)
+                  : "תיקו";
             return (
               <button
                 key={w}
@@ -163,9 +168,9 @@ function PredictionForm({
       <div>
         <div className="text-sm font-bold mb-2">תוצאה מדויקת</div>
         <div className="flex items-center justify-center gap-3">
-          <ScoreSpinner value={home} setValue={setHome} label={match.home_team?.name_he ?? match.home_team?.name ?? "בית"} />
+          <ScoreSpinner value={home} setValue={setHome} label={teamLabel(match.home_team, "בית")} />
           <span className="text-3xl font-black text-muted-foreground">-</span>
-          <ScoreSpinner value={away} setValue={setAway} label={match.away_team?.name_he ?? match.away_team?.name ?? "חוץ"} />
+          <ScoreSpinner value={away} setValue={setAway} label={teamLabel(match.away_team, "חוץ")} />
         </div>
       </div>
 
