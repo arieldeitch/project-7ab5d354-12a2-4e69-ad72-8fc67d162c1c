@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SelectPlayerRouteImport } from './routes/select-player'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SelectPlayerRoute = SelectPlayerRouteImport.update({
   id: '/select-player',
   path: '/select-player',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/select-player': typeof SelectPlayerRoute
+  '/setup': typeof SetupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/select-player': typeof SelectPlayerRoute
+  '/setup': typeof SetupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/select-player': typeof SelectPlayerRoute
+  '/setup': typeof SetupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/select-player'
+  fullPaths: '/' | '/select-player' | '/setup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/select-player'
-  id: '__root__' | '/' | '/select-player'
+  to: '/' | '/select-player' | '/setup'
+  id: '__root__' | '/' | '/select-player' | '/setup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/select-player': {
       id: '/select-player'
       path: '/select-player'
@@ -71,7 +88,18 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SelectPlayerRoute: SelectPlayerRoute,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
