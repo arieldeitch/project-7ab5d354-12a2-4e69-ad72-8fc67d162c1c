@@ -1,19 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Navigate } from "@tanstack/react-router";
+import { usePlayer } from "@/lib/player-context";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "אתגר המונדיאל 2026" },
+      { name: "description", content: "תחזיות מונדיאל משפחתיות לתום ורוני" },
+      { property: "og:title", content: "אתגר המונדיאל 2026" },
+      { property: "og:description", content: "המונדיאל המשפחתי - תחזיות, הישגים, מדליות" },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const { active, ready } = usePlayer();
+  if (!ready) {
+    return (
+      <div className="min-h-dvh grid place-items-center">
+        <div className="text-7xl animate-pulse">⚽</div>
+      </div>
+    );
+  }
+  if (active) return <Navigate to="/home" />;
+  return <Navigate to="/select-player" />;
+}
+
+// legacy
+function _PlaceholderIndex() {
   return (
     <div
       className="flex min-h-screen items-center justify-center"
