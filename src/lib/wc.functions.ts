@@ -20,7 +20,7 @@ export const getPlayers = createServerFn({ method: "GET" }).handler(async () => 
 });
 
 export const getMyProfile = createServerFn({ method: "GET" })
-  .inputValidator((d: { name: string }) => z.object({ name: z.string() }).parse(d))
+  .validator((d: { name: string }) => z.object({ name: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: player } = await supabaseAdmin
@@ -61,7 +61,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   });
 
 export const updatePlayerProfile = createServerFn({ method: "POST" })
-  .inputValidator((d: { name: string; favorite_team_id?: number | null; favorite_player_id?: number | null }) =>
+  .validator((d: { name: string; favorite_team_id?: number | null; favorite_player_id?: number | null }) =>
     z
       .object({
         name: z.string(),
@@ -90,7 +90,7 @@ export const getTeams = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const searchFootballPlayers = createServerFn({ method: "GET" })
-  .inputValidator((d: { q?: string; teamId?: number | null }) =>
+  .validator((d: { q?: string; teamId?: number | null }) =>
     z.object({ q: z.string().optional(), teamId: z.number().nullable().optional() }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -120,7 +120,7 @@ export const getTodayMatches = createServerFn({ method: "GET" }).handler(async (
 });
 
 export const getUpcomingMatches = createServerFn({ method: "GET" })
-  .inputValidator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
+  .validator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
@@ -134,7 +134,7 @@ export const getUpcomingMatches = createServerFn({ method: "GET" })
   });
 
 export const getMatchesByStage = createServerFn({ method: "GET" })
-  .inputValidator((d: { stage: string }) => z.object({ stage: z.string() }).parse(d))
+  .validator((d: { stage: string }) => z.object({ stage: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await (supabaseAdmin as any)
@@ -333,7 +333,7 @@ export const getMatchesByGroup = createServerFn({ method: "GET" })
 /* ---------- Predictions ---------- */
 
 export const getMyPredictions = createServerFn({ method: "GET" })
-  .inputValidator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
+  .validator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: player } = await supabaseAdmin
@@ -351,7 +351,7 @@ export const getMyPredictions = createServerFn({ method: "GET" })
   });
 
 export const savePrediction = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         playerName: z.string(),
@@ -405,7 +405,7 @@ export const savePrediction = createServerFn({ method: "POST" })
 /* ---------- Bracket ---------- */
 
 export const getBracket = createServerFn({ method: "GET" })
-  .inputValidator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
+  .validator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: player } = await supabaseAdmin
@@ -423,7 +423,7 @@ export const getBracket = createServerFn({ method: "GET" })
   });
 
 export const saveBracket = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         playerName: z.string(),
@@ -558,7 +558,9 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
       const groupCodes = new Set<string>();
       for (const group of standings[0].league.standings) {
         for (const t of group) {
-          const groupCode = (t.group ?? "").replace(/[^A-L]/gi, "").toUpperCase().slice(-1) || "A";
+          const groupLetterMatch = (t.group ?? "").match(/\bGroup\s+([A-L])\b/i);
+          if (!groupLetterMatch) continue;
+          const groupCode = groupLetterMatch[1].toUpperCase();
           groupCodes.add(groupCode);
           rows.push({
             group_code: groupCode,

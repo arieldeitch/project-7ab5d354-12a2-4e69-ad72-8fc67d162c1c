@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { usePlayer, PLAYER_META } from "@/lib/player-context";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyProfile } from "@/lib/wc.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/select-player")({
   head: () => ({ meta: [{ title: "בחר שחקן · אתגר המונדיאל" }] }),
@@ -15,9 +16,15 @@ function SelectPlayer() {
 
   const pick = async (name: "tom" | "rony") => {
     setActive(name);
-    const profile = await getProfile({ data: { name } });
-    const setupDone = profile?.bracket?.champion_team_id;
-    navigate({ to: setupDone ? "/home" : "/setup" });
+    try {
+      const profile = await getProfile({ data: { name } });
+      const setupDone = profile?.bracket?.champion_team_id;
+      navigate({ to: setupDone ? "/home" : "/setup" });
+    } catch {
+      // Profile fetch failed — navigate to setup so the player can still enter
+      toast.error("בעיה בטעינת הפרופיל, ניסיון מחדש...");
+      navigate({ to: "/setup" });
+    }
   };
 
   return (

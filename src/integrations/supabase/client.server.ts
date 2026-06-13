@@ -8,18 +8,29 @@ import type { Database } from './types';
 function createSupabaseAdminClient() {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // All RLS policies are USING(true) with full GRANT to anon, so the publishable
+  // key works identically to the service role key for this family app.
+  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+  if (!SUPABASE_URL) {
+    const message = 'Missing Supabase environment variable: SUPABASE_URL';
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const authKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_PUBLISHABLE_KEY;
+
+  if (!authKey) {
+    const message = 'Missing Supabase key: set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY';
+    console.error(`[Supabase] ${message}`);
+    throw new Error(message);
+  }
+
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('[Supabase] SUPABASE_SERVICE_ROLE_KEY not set — falling back to anon key (works with open RLS)');
+  }
+
+  return createClient<Database>(SUPABASE_URL, authKey, {
     auth: {
       storage: undefined,
       persistSession: false,

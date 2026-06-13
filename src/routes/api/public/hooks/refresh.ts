@@ -10,11 +10,12 @@ export const Route = createFileRoute("/api/public/hooks/refresh")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const startedAt = new Date().toISOString();
         const sb = supabaseAdmin as any;
-        const counts = { teams: 0, fixtures: 0 };
+        const counts = { teams: 0, fixtures: 0, standings: 0, scorers: 0 };
         try {
+          /* Teams */
           const teams = await apiFootball.teams();
           if (teams.length > 0) {
-            await sb.from("teams").upsert(
+            const { error } = await sb.from("teams").upsert(
               teams.map((t: any) => ({
                 id: t.team.id,
                 name: t.team.name,
@@ -24,11 +25,14 @@ export const Route = createFileRoute("/api/public/hooks/refresh")({
               })),
               { onConflict: "id" },
             );
+            if (error) throw error;
             counts.teams = teams.length;
           }
+
+          /* Fixtures */
           const fixtures = await apiFootball.fixtures();
           if (fixtures.length > 0) {
-            await sb.from("matches").upsert(
+            const { error } = await sb.from("matches").upsert(
               fixtures.map((f: any) => ({
                 id: f.fixture.id,
                 external_id: String(f.fixture.id),
@@ -46,12 +50,72 @@ export const Route = createFileRoute("/api/public/hooks/refresh")({
               })),
               { onConflict: "id" },
             );
+            if (error) throw error;
             counts.fixtures = fixtures.length;
           }
+
+          /* Standings */
+          try {
+            const standings = await apiFootball.standings();
+            if (standings.length > 0 && standings[0]?.league?.standings) {
+              const rows: Array<Record<string, unknown>> = [];
+              const groupCodes = new Set<string>();
+              for (const group of standings[0].league.standings) {
+                for (const t of group) {
+                  const groupLetterMatch = (t.group ?? "").match(/\bGroup\s+([A-L])\b/i);
+                  if (!groupLetterMatch) continue;
+                  const groupCode = groupLetterMatch[1].toUpperCase();
+                  groupCodes.add(groupCode);
+                  rows.push({
+                    group_code: groupCode,
+                    team_id: t.team.id,
+                    rank: t.rank,
+                    played: t.all.played,
+                    wins: t.all.win,
+                    draws: t.all.draw,
+                    losses: t.all.lose,
+                    goals_for: t.all.goals.for,
+                    goals_against: t.all.goals.against,
+                    goal_difference: t.goalsDiff,
+                    points: t.points,
+                  });
+                  await sb.from("teams").update({ group_code: groupCode }).eq("id", t.team.id);
+                }
+              }
+              if (rows.length > 0) {
+                await sb.from("standings").delete().in("group_code", Array.from(groupCodes));
+                const { error } = await sb.from("standings").insert(rows);
+                if (error) throw error;
+                counts.standings = rows.length;
+              }
+            }
+          } catch (e) {
+            console.warn("[refresh] standings failed (non-fatal)", e);
+          }
+
+          /* Top scorers → populates football_players for pickers */
+          try {
+            const scorers = await apiFootball.topScorers();
+            const rows = scorers.map((s: any) => ({
+              id: s.player.id,
+              name: s.player.name,
+              team_id: s.statistics?.[0]?.team?.id ?? null,
+              position: s.statistics?.[0]?.games?.position ?? null,
+              photo_url: s.player.photo ?? null,
+              nationality: s.player.nationality ?? null,
+            }));
+            if (rows.length > 0) {
+              await sb.from("football_players").upsert(rows, { onConflict: "id" });
+              counts.scorers = rows.length;
+            }
+          } catch (e) {
+            console.warn("[refresh] topScorers failed (non-fatal)", e);
+          }
+
           await sb.from("refresh_logs").insert({
             kind: "cron",
             status: "ok",
-            detail: `teams:${counts.teams} fixtures:${counts.fixtures}`,
+            detail: `teams:${counts.teams} fixtures:${counts.fixtures} standings:${counts.standings} scorers:${counts.scorers}`,
             started_at: startedAt,
             finished_at: new Date().toISOString(),
           });
