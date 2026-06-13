@@ -318,6 +318,18 @@ export const getStandings = createServerFn({ method: "GET" }).handler(async () =
   return data ?? [];
 });
 
+export const getMatchesByGroup = createServerFn({ method: "GET" })
+  .inputValidator((d: { group: string }) => z.object({ group: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await (supabaseAdmin as any)
+      .from("matches")
+      .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
+      .eq("group_code", data.group)
+      .order("kickoff_at");
+    return rows ?? [];
+  });
+
 /* ---------- Predictions ---------- */
 
 export const getMyPredictions = createServerFn({ method: "GET" })
