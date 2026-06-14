@@ -19,6 +19,38 @@ export const getPlayers = createServerFn({ method: "GET" }).handler(async () => 
   return data ?? [];
 });
 
+export const ensureMyProfile = createServerFn({ method: "POST" })
+  .inputValidator((d: { name: string; age: number; displayName: string; avatarEmoji: string }) =>
+    z
+      .object({
+        name: z.string(),
+        age: z.number(),
+        displayName: z.string(),
+        avatarEmoji: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing } = await supabaseAdmin
+      .from("players")
+      .select("id")
+      .eq("name", data.name)
+      .maybeSingle();
+    if (!existing) {
+      const { error } = await (supabaseAdmin.from("players") as any).insert({
+        name: data.name,
+        age: data.age,
+        display_name: data.displayName,
+        avatar_emoji: data.avatarEmoji,
+        total_points: 0,
+      });
+      // Ignore unique-violation races (two tabs opening simultaneously)
+      if (error && !String(error.message).includes("duplicate")) throw error;
+    }
+    return { ok: true };
+  });
+
 export const getMyProfile = createServerFn({ method: "GET" })
   .inputValidator((d: { name: string }) => z.object({ name: z.string() }).parse(d))
   .handler(async ({ data }) => {
@@ -710,6 +742,39 @@ async function recalcAllScoresInternal() {
 export const recalcAllScores = createServerFn({ method: "POST" }).handler(async () => {
   await recalcAllScoresInternal();
   return { ok: true };
+});
+
+/* ---------- Data stats (admin verification) ---------- */
+
+export const getDataStats = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const [
+    { count: teams },
+    { count: fixtures },
+    { count: standings },
+    { count: finished },
+    { count: upcoming },
+    { count: live },
+    { data: groupRows },
+  ] = await Promise.all([
+    supabaseAdmin.from("teams").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("matches").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("standings").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).eq("status", "finished"),
+    supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
+    supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).eq("status", "live"),
+    supabaseAdmin.from("standings").select("group_code").order("group_code"),
+  ]);
+  const groups = new Set((groupRows ?? []).map((r: any) => r.group_code)).size;
+  return {
+    teams: teams ?? 0,
+    fixtures: fixtures ?? 0,
+    standings: standings ?? 0,
+    groups,
+    finished: finished ?? 0,
+    upcoming: upcoming ?? 0,
+    live: live ?? 0,
+  };
 });
 
 /* ---------- Refresh logs (admin) ---------- */

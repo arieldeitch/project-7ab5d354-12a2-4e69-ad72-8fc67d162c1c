@@ -88,6 +88,35 @@ export const TEAM_HE_BY_CODE: Record<string, string> = {
   ISR: "ישראל",
 };
 
+/** API-Football 3-letter code → ISO 3166-1 alpha-2 for FlagCDN. */
+export const CODE_TO_ISO2: Record<string, string> = {
+  ALG: "dz", ARG: "ar", AUS: "au", AUT: "at", BEL: "be",
+  BFA: "bf", BHR: "bh", BIH: "ba", BOL: "bo", BRA: "br",
+  CAN: "ca", CGO: "cg", CHI: "cl", CHN: "cn", CIV: "ci",
+  CMR: "cm", COL: "co", CPV: "cv", CRC: "cr", CRO: "hr",
+  CUR: "cw", CZE: "cz", DEN: "dk", ECU: "ec", EGY: "eg",
+  ENG: "gb-eng", ESP: "es", FRA: "fr", GER: "de", GHA: "gh",
+  GUA: "gt", HAI: "ht", HON: "hn", IRL: "ie", IRN: "ir",
+  IRQ: "iq", ISR: "il", ITA: "it", JAM: "jm", JOR: "jo",
+  JPN: "jp", KEN: "ke", KOR: "kr", KSA: "sa", KUW: "kw",
+  LBN: "lb", MAR: "ma", MEX: "mx", MLI: "ml", NED: "nl",
+  NGA: "ng", NOR: "no", NZL: "nz", OMA: "om", PAN: "pa",
+  PAR: "py", PER: "pe", PLE: "ps", POL: "pl", POR: "pt",
+  QAT: "qa", RSA: "za", SCO: "gb-sct", SEN: "sn", SLV: "sv",
+  SRB: "rs", SUI: "ch", SWE: "se", SYR: "sy", THA: "th",
+  TUN: "tn", TUR: "tr", UAE: "ae", UGA: "ug", URU: "uy",
+  USA: "us", UZB: "uz", VEN: "ve", VIE: "vn", WAL: "gb-wls",
+  ZAM: "zm",
+};
+
+/** Returns a working FlagCDN URL for an API-Football 3-letter team code, or null. */
+export function flagCdnUrl(code?: string | null): string | null {
+  if (!code) return null;
+  const iso2 = CODE_TO_ISO2[code.toUpperCase()];
+  if (!iso2) return null;
+  return `https://flagcdn.com/w160/${iso2}.png`;
+}
+
 type AnyTeam = {
   name?: string | null;
   name_he?: string | null;

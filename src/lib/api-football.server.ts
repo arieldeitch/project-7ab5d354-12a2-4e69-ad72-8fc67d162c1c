@@ -3,6 +3,8 @@
  * Uses x-apisports-key header. Works with both direct and RapidAPI keys.
  */
 
+import { flagCdnUrl } from "./team-names";
+
 const BASE = "https://v3.football.api-sports.io";
 export const WORLD_CUP_LEAGUE_ID = 1;
 export const WORLD_CUP_SEASON = 2026;
@@ -144,5 +146,5 @@ export function statusFromApi(short: string): string {
 
 export function flagUrl(code?: string): string | null {
   if (!code) return null;
-  return `https://flagcdn.com/w160/${code.toLowerCase()}.png`;
+  return flagCdnUrl(code) ?? `https://media.api-sports.io/flags/${code.toLowerCase()}.svg`;
 }

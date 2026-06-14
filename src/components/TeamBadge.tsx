@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { teamInitials, teamLabel } from "@/lib/team-names";
+import { useState, useEffect } from "react";
+import { teamInitials, teamLabel, flagCdnUrl } from "@/lib/team-names";
 
 type Team = {
   id?: number;
@@ -11,8 +11,8 @@ type Team = {
 } | null | undefined;
 
 /**
- * Circular team badge with flag + automatic Hebrew-initials fallback.
- * Keeps a stable footprint to prevent layout shift.
+ * Circular team badge with 3-source flag fallback:
+ *   stored flag_url → stored logo_url → FlagCDN (computed from code) → Hebrew initials
  */
 export function TeamBadge({
   team,
@@ -23,8 +23,20 @@ export function TeamBadge({
   size?: number;
   className?: string;
 }) {
-  const [errored, setErrored] = useState(false);
-  const src = !errored ? (team?.flag_url ?? team?.logo_url ?? "") : "";
+  const [srcIndex, setSrcIndex] = useState(0);
+
+  // Rebuild source list when team changes and reset index
+  const sources = [
+    team?.flag_url,
+    team?.logo_url,
+    flagCdnUrl(team?.code),
+  ].filter((s): s is string => Boolean(s));
+
+  useEffect(() => {
+    setSrcIndex(0);
+  }, [team?.id, team?.code]);
+
+  const src = srcIndex < sources.length ? sources[srcIndex] : null;
 
   return (
     <div
@@ -41,7 +53,7 @@ export function TeamBadge({
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"
-          onError={() => setErrored(true)}
+          onError={() => setSrcIndex((i) => i + 1)}
         />
       ) : (
         <span className="text-gold">{teamInitials(team)}</span>

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { usePlayer, PLAYER_META } from "@/lib/player-context";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyProfile } from "@/lib/wc.functions";
+import { ensureMyProfile } from "@/lib/wc.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/select-player")({
@@ -12,28 +12,19 @@ export const Route = createFileRoute("/select-player")({
 function SelectPlayer() {
   const { setActive } = usePlayer();
   const navigate = useNavigate();
-  const getProfile = useServerFn(getMyProfile);
+  const ensureProfile = useServerFn(ensureMyProfile);
 
   const pick = async (name: "tom" | "rony") => {
     try {
-      const profile = await getProfile({ data: { name } });
+      const meta = PLAYER_META[name];
+      await ensureProfile({
+        data: { name, age: meta.age, displayName: meta.display, avatarEmoji: meta.emoji },
+      });
       setActive(name);
-      const setupDone = profile?.bracket?.champion_team_id;
-      try {
-        await navigate({ to: setupDone ? "/home" : "/setup" });
-      } catch (navErr) {
-        console.error("navigation failed after profile fetch:", navErr);
-        toast.error("בעיה במעבר לעמוד, נסה שוב");
-      }
+      await navigate({ to: "/home" });
     } catch (err) {
       console.error("pick() failed:", err);
-      toast.error("בעיה בטעינת הפרופיל, ניסיון מחדש...");
-      try {
-        setActive(name);
-        await navigate({ to: "/setup" });
-      } catch (navErr) {
-        console.error("fallback navigation failed:", navErr);
-      }
+      toast.error("בעיה בכניסה, נסה שוב");
     }
   };
 
