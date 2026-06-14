@@ -73,7 +73,7 @@ function Bracket() {
     { id: "runner", label: "🥈 סגן האלוף", value: runnerUp, set: setRunnerUp, kind: "team", points: 25, display: teamName },
     { id: "third", label: "🥉 מקום שלישי", value: third, set: setThird, kind: "team", points: 15, display: teamName },
     { id: "boot", label: "👟 נעל הזהב", value: boot, set: setBoot, kind: "player", points: 50, display: playerName2 },
-    { id: "mvp", label: "⭐ MVP", value: mvp, set: setMvp, kind: "player", points: 50, display: playerName2 },
+    { id: "mvp", label: "⭐ שחקן מצטיין", value: mvp, set: setMvp, kind: "player", points: 50, display: playerName2 },
   ] as const;
 
   return (

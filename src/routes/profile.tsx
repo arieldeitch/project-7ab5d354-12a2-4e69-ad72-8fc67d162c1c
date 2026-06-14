@@ -75,7 +75,7 @@ function Profile() {
       <div className="space-y-2 mb-5">
         <PrefRow label="האלוף שלי" value={champion?.name_he ?? champion?.name ?? "טרם נבחר"} flag={champion?.flag_url} />
         <PrefRow label="נעל הזהב" value={boot?.name ?? "טרם נבחר"} flag={boot?.photo_url} />
-        <PrefRow label="MVP" value={mvp?.name ?? "טרם נבחר"} flag={mvp?.photo_url} />
+        <PrefRow label="שחקן מצטיין" value={mvp?.name ?? "טרם נבחר"} flag={mvp?.photo_url} />
       </div>
 
       <h2 className="text-lg font-black mb-2">⭐ הישגים</h2>

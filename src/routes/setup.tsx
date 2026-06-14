@@ -26,7 +26,7 @@ export const Route = createFileRoute("/setup")({
   ),
 });
 
-const STEPS = ["נבחרת אהובה", "שחקן אהוב", "האלוף שלי", "מלך השערים", "MVP"] as const;
+const STEPS = ["נבחרת אהובה", "שחקן אהוב", "האלוף שלי", "מלך השערים", "מצטיין"] as const;
 
 function Setup() {
   const { active } = usePlayer();
@@ -163,7 +163,7 @@ function Setup() {
           {step === 4 && (
             <>
               <h2 className="text-xl font-black mb-1">מי יהיה השחקן הכי טוב בטורניר?</h2>
-              <p className="text-xs text-muted-foreground mb-3">MVP - השחקן המצטיין</p>
+              <p className="text-xs text-muted-foreground mb-3">השחקן המצטיין ביותר בטורניר</p>
               <PlayerPicker players={players.data ?? []} value={mvp} onChange={setMvp} />
             </>
           )}

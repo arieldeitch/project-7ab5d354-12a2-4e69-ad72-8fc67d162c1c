@@ -120,7 +120,7 @@ export function MatchCard({
         <TeamSide team={match.home_team} winner={homeWon} loser={awayWon} />
         <div className="flex flex-col items-center min-w-[72px]">
           {isScheduled ? (
-            <span className="text-3xl font-extrabold text-muted-foreground">VS</span>
+            <span className="text-3xl font-extrabold text-muted-foreground">נגד</span>
           ) : (
             <>
               <div

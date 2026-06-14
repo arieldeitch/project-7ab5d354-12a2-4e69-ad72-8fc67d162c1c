@@ -10,6 +10,11 @@ export const Route = createFileRoute("/admin")({
   component: Admin,
 });
 
+const KIND_HE: Record<string, string> = {
+  full: "ריענון מלא",
+  live_sync: "עדכון שידור חי",
+};
+
 function Admin() {
   const refreshFn = useServerFn(refreshWorldCupData);
   const recalcFn = useServerFn(recalcAllScores);
@@ -71,7 +76,7 @@ function Admin() {
           <div key={l.id} className="p-3 text-sm">
             <div className="flex justify-between">
               <span className={"font-bold " + (l.status === "ok" ? "text-primary" : "text-destructive")}>
-                {l.status === "ok" ? "✓" : "✗"} {l.kind}
+                {l.status === "ok" ? "✓" : "✗"} {KIND_HE[l.kind] ?? l.kind}
               </span>
               <span className="text-xs text-muted-foreground">{new Date(l.started_at).toLocaleString("he-IL")}</span>
             </div>
