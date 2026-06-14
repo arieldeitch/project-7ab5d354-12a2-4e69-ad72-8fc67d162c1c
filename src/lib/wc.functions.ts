@@ -250,14 +250,23 @@ export async function syncLiveMatchesInternal(): Promise<{
   // 1. Pull currently live WC fixtures
   const liveFx = await apiFootball.liveFixtures();
 
-  // 2. Also re-pull any match that DB still thinks is live but API may have finished
+  // 2. Also re-pull any match that DB thinks is live, plus scheduled matches whose
+  //    kickoff was > 2h ago (finished while nobody was watching / cron not yet active).
   const { data: dbLive } = await supabaseAdmin
     .from("matches")
     .select("id")
     .eq("status", "live");
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const { data: staleScheduled } = await supabaseAdmin
+    .from("matches")
+    .select("id")
+    .eq("status", "scheduled")
+    .lt("kickoff_at", twoHoursAgo)
+    .limit(15); // cap to avoid API rate-limit spikes
   const liveIds = new Set<number>([
     ...liveFx.map((f) => f.fixture.id),
     ...(dbLive ?? []).map((m) => m.id),
+    ...(staleScheduled ?? []).map((m: any) => m.id),
   ]);
 
   // 3. Fetch per-fixture detail for accuracy on the ones DB had as live but API didn't return
@@ -892,10 +901,24 @@ export async function recalcGroupStandingsInternal() {
     else { hs.losses++; as_.wins++; }
   }
 
+  // Only recalc groups that have at least one finished match in DB.
+  // Groups with no synced data must be left untouched — otherwise we wipe the
+  // API-Football standings that the full refresh populated for those groups.
+  const groupsWithData = new Set<string>();
+  for (const m of matches ?? []) {
+    if (m.home_team_id == null || m.away_team_id == null) continue;
+    const hgc = groupMap.get(m.home_team_id);
+    const agc = groupMap.get(m.away_team_id);
+    if (hgc) groupsWithData.add(hgc);
+    if (agc) groupsWithData.add(agc);
+  }
+
+  if (groupsWithData.size === 0) return; // Nothing finished yet — leave API standings intact
+
   const byGroup = new Map<string, Array<{ team_id: number; s: Stats }>>();
   for (const [team_id, s] of statMap.entries()) {
     const gc = groupMap.get(team_id);
-    if (!gc) continue;
+    if (!gc || !groupsWithData.has(gc)) continue; // skip groups with no finished matches
     if (!byGroup.has(gc)) byGroup.set(gc, []);
     byGroup.get(gc)!.push({ team_id, s });
   }
