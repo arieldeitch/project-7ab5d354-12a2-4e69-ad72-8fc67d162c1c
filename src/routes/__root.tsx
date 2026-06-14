@@ -81,9 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "אפליקציית התחזיות המשפחתית של תום ורוני למונדיאל 2026" },
       { name: "theme-color", content: "#0d1b2a" },
       { property: "og:title", content: "אתגר המונדיאל 2026" },
-      { property: "og:description", content: "תחזיות, הישגים ומדליות במונדיאל המשפחתי" },
+      { property: "og:description", content: "אפליקציית התחזיות המשפחתית של תום ורוני למונדיאל 2026" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "אתגר המונדיאל 2026" },
+      { name: "twitter:description", content: "אפליקציית התחזיות המשפחתית של תום ורוני למונדיאל 2026" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3b1277b6-6aa4-4858-b612-fbaf132bf4b0/id-preview-3df2bbf5--7ab5d354-12a2-4e69-ad72-8fc67d162c1c.lovable.app-1781399201926.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3b1277b6-6aa4-4858-b612-fbaf132bf4b0/id-preview-3df2bbf5--7ab5d354-12a2-4e69-ad72-8fc67d162c1c.lovable.app-1781399201926.png" },
     ],
     links: [
       {
