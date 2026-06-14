@@ -839,6 +839,66 @@ export const getDataStats = createServerFn({ method: "GET" }).handler(async () =
   };
 });
 
+/* ---------- Match Detail ---------- */
+
+export const getMatchDetail = createServerFn({ method: "GET" })
+  .inputValidator((d: { matchId: number }) => z.object({ matchId: z.number() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: match } = await supabaseAdmin
+      .from("matches")
+      .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
+      .eq("id", data.matchId)
+      .maybeSingle();
+    if (!match) throw new Error("Match not found");
+
+    const { data: players } = await supabaseAdmin
+      .from("players")
+      .select("id, name, display_name, avatar_emoji")
+      .order("age", { ascending: false });
+
+    const predictions = await Promise.all(
+      (players ?? []).map(async (p) => {
+        const { data: pred } = await (supabaseAdmin
+          .from("predictions")
+          .select("winner,home_score,away_score,first_scorer_id,anytime_scorer_id,over_2_5,both_teams_score,score:prediction_scores(winner_points,score_points,first_scorer_points,anytime_scorer_points,totals_points,btts_points,total_points)")
+          .eq("player_id", p.id)
+          .eq("match_id", data.matchId)
+          .maybeSingle() as any);
+        const scoreArr = (pred as any)?.score;
+        const score = Array.isArray(scoreArr) ? (scoreArr[0] ?? null) : (scoreArr ?? null);
+        return {
+          player: p,
+          prediction: pred
+            ? {
+                winner: pred.winner as "home" | "draw" | "away" | null,
+                home_score: pred.home_score as number | null,
+                away_score: pred.away_score as number | null,
+                first_scorer_id: pred.first_scorer_id as number | null,
+                anytime_scorer_id: pred.anytime_scorer_id as number | null,
+                over_2_5: pred.over_2_5 as boolean | null,
+                both_teams_score: pred.both_teams_score as boolean | null,
+              }
+            : null,
+          score: score
+            ? {
+                winner_points: (score.winner_points ?? 0) as number,
+                score_points: (score.score_points ?? 0) as number,
+                first_scorer_points: (score.first_scorer_points ?? 0) as number,
+                anytime_scorer_points: (score.anytime_scorer_points ?? 0) as number,
+                totals_points: (score.totals_points ?? 0) as number,
+                btts_points: (score.btts_points ?? 0) as number,
+                total_points: (score.total_points ?? 0) as number,
+              }
+            : null,
+        };
+      }),
+    );
+
+    return { match, predictions };
+  });
+
 /* ---------- Refresh logs (admin) ---------- */
 
 export const getRefreshLogs = createServerFn({ method: "GET" }).handler(async () => {

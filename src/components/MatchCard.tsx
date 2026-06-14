@@ -144,7 +144,7 @@ export function MatchCard({
           {cityLabel ? ` · ${cityLabel}` : ""}
         </div>
       )}
-      {footer && <div className="mt-3">{footer}</div>}
+      {footer && <div className="mt-3" onClick={(e) => e.stopPropagation()}>{footer}</div>}
     </div>
   );
 }

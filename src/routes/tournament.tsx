@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -58,6 +58,8 @@ function Tournament() {
 }
 
 function Groups() {
+  const navigate = useNavigate();
+  const toMatch = (id: number) => navigate({ to: "/match/$matchId", params: { matchId: String(id) } });
   const fn = useServerFn(getStandings);
   const finishedFn = useServerFn(getFinishedMatches);
   const upcomingFn = useServerFn(getUpcomingMatches);
@@ -133,7 +135,7 @@ function Groups() {
           <h3 className="text-lg font-black text-gold mb-2">🏁 תוצאות אחרונות</h3>
           <div className="space-y-2">
             {finished.data!.slice(0, 6).map((m: any) => (
-              <MatchCard key={m.id} match={m} />
+              <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
             ))}
           </div>
         </div>
@@ -144,7 +146,7 @@ function Groups() {
           <h3 className="text-lg font-black text-gold mb-2">⏭️ המשחקים הבאים</h3>
           <div className="space-y-2">
             {upcoming.data!.slice(0, 6).map((m: any) => (
-              <MatchCard key={m.id} match={m} />
+              <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
             ))}
           </div>
         </div>
@@ -163,6 +165,8 @@ const KO_STAGES = [
 ] as const;
 
 function GroupCenter() {
+  const navigate = useNavigate();
+  const toMatch = (id: number) => navigate({ to: "/match/$matchId", params: { matchId: String(id) } });
   const standingsFn = useServerFn(getStandings);
   const matchesFn = useServerFn(getMatchesByGroup);
   const standings = useQuery({ queryKey: ["standings"], queryFn: () => standingsFn() });
@@ -286,7 +290,7 @@ function GroupCenter() {
           <h3 className="text-lg font-black text-gold mb-2">🏁 תוצאות הבית</h3>
           <div className="space-y-2">
             {finishedMatches.map((m: any) => (
-              <MatchCard key={m.id} match={m} />
+              <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
             ))}
           </div>
         </div>
@@ -296,7 +300,7 @@ function GroupCenter() {
           <h3 className="text-lg font-black text-gold mb-2">⏭️ משחקי הבית הקרובים</h3>
           <div className="space-y-2">
             {upcomingMatches.map((m: any) => (
-              <MatchCard key={m.id} match={m} />
+              <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
             ))}
           </div>
         </div>
@@ -322,6 +326,7 @@ function Knockout() {
 }
 
 function StageBlock({ stage, label, fn }: { stage: string; label: string; fn: any }) {
+  const navigate = useNavigate();
   const q = useQuery({ queryKey: ["stage", stage], queryFn: () => fn({ data: { stage } }) });
   const rows = q.data ?? [];
   if (q.isLoading) return null;
@@ -331,7 +336,11 @@ function StageBlock({ stage, label, fn }: { stage: string; label: string; fn: an
       <h3 className="text-lg font-black text-gold mb-2">{label}</h3>
       <div className="space-y-2">
         {rows.map((m: any) => (
-          <MatchCard key={m.id} match={m} />
+          <MatchCard
+            key={m.id}
+            match={m}
+            onClick={() => navigate({ to: "/match/$matchId", params: { matchId: String(m.id) } })}
+          />
         ))}
       </div>
     </div>
@@ -339,6 +348,7 @@ function StageBlock({ stage, label, fn }: { stage: string; label: string; fn: an
 }
 
 function TrophyPage() {
+  const navigate = useNavigate();
   const fn = useServerFn(getMatchesByStage);
   const finals = useQuery({ queryKey: ["stage", "final"], queryFn: () => fn({ data: { stage: "final" } }) });
   const f = finals.data?.[0];
@@ -349,7 +359,10 @@ function TrophyPage() {
       <p className="text-sm text-muted-foreground mb-4">השאיפה הגדולה של 32 הנבחרות</p>
       {f ? (
         <div className="mt-4">
-          <MatchCard match={f} />
+          <MatchCard
+            match={f}
+            onClick={() => navigate({ to: "/match/$matchId", params: { matchId: String(f.id) } })}
+          />
           {f.status === "finished" && (
             <div className="mt-4 trophy-glow rounded-2xl p-4 animate-shimmer-gold">
               <div className="text-sm font-bold">האלוף:</div>

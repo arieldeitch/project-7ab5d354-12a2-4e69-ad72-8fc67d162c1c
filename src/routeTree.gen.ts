@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MatchMatchIdRouteImport } from './routes/match.$matchId'
 import { Route as TournamentRouteImport } from './routes/tournament'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -23,6 +24,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicHooksRefreshLiveRouteImport } from './routes/api/public/hooks/refresh-live'
 import { Route as ApiPublicHooksRefreshRouteImport } from './routes/api/public/hooks/refresh'
 
+const MatchMatchIdRoute = MatchMatchIdRouteImport.update({
+  id: '/match/$matchId',
+  path: '/match/$matchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TournamentRoute = TournamentRouteImport.update({
   id: '/tournament',
   path: '/tournament',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/match/$matchId': typeof MatchMatchIdRoute
   '/predictions': typeof PredictionsRoute
   '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/match/$matchId': typeof MatchMatchIdRoute
   '/predictions': typeof PredictionsRoute
   '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/match/$matchId': typeof MatchMatchIdRoute
   '/predictions': typeof PredictionsRoute
   '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/bracket'
     | '/home'
     | '/leaderboard'
+    | '/match/$matchId'
     | '/predictions'
     | '/profile'
     | '/select-player'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/bracket'
     | '/home'
     | '/leaderboard'
+    | '/match/$matchId'
     | '/predictions'
     | '/profile'
     | '/select-player'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/bracket'
     | '/home'
     | '/leaderboard'
+    | '/match/$matchId'
     | '/predictions'
     | '/profile'
     | '/select-player'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   BracketRoute: typeof BracketRoute
   HomeRoute: typeof HomeRoute
   LeaderboardRoute: typeof LeaderboardRoute
+  MatchMatchIdRoute: typeof MatchMatchIdRoute
   PredictionsRoute: typeof PredictionsRoute
   ProfileRoute: typeof ProfileRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
@@ -202,6 +215,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/match/$matchId': {
+      id: '/match/$matchId'
+      path: '/match/$matchId'
+      fullPath: '/match/$matchId'
+      preLoaderRoute: typeof MatchMatchIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournament': {
       id: '/tournament'
       path: '/tournament'
@@ -302,6 +322,7 @@ const rootRouteChildren: RootRouteChildren = {
   BracketRoute: BracketRoute,
   HomeRoute: HomeRoute,
   LeaderboardRoute: LeaderboardRoute,
+  MatchMatchIdRoute: MatchMatchIdRoute,
   PredictionsRoute: PredictionsRoute,
   ProfileRoute: ProfileRoute,
   SelectPlayerRoute: SelectPlayerRoute,

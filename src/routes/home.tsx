@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -35,6 +35,8 @@ export const Route = createFileRoute("/home")({
 function Home() {
   const { active } = usePlayer();
   const meta = PLAYER_META[active!];
+  const navigate = useNavigate();
+  const toMatch = (id: number) => navigate({ to: "/match/$matchId", params: { matchId: String(id) } });
   const todayFn = useServerFn(getTodayMatches);
   const upcomingFn = useServerFn(getUpcomingMatches);
   const lbFn = useServerFn(getLeaderboard);
@@ -235,12 +237,12 @@ function Home() {
                     </span>
                   }
                 >
-                  {liveToday.map((m: any) => <MatchCard key={m.id} match={m} />)}
+                  {liveToday.map((m: any) => <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />)}
                 </TodayGroup>
               )}
               {finishedToday.length > 0 && (
                 <TodayGroup title="🏁 הסתיימו היום">
-                  {finishedToday.map((m: any) => <MatchCard key={m.id} match={m} />)}
+                  {finishedToday.map((m: any) => <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />)}
                 </TodayGroup>
               )}
               {scheduledToday.length > 0 && (
@@ -251,6 +253,7 @@ function Home() {
                       <MatchCard
                         key={m.id}
                         match={m}
+                        onClick={() => toMatch(m.id)}
                         footer={
                           <Link
                             to="/predictions"
@@ -285,7 +288,7 @@ function Home() {
           ) : (
             <div className="space-y-3">
               {(finished.data ?? []).map((m: any) => (
-                <MatchCard key={m.id} match={m} />
+                <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
               ))}
             </div>
           )
@@ -304,6 +307,7 @@ function Home() {
                   <MatchCard
                     key={m.id}
                     match={m}
+                    onClick={() => toMatch(m.id)}
                     footer={
                       <Link
                         to="/predictions"
