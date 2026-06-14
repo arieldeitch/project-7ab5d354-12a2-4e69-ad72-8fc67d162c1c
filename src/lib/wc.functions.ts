@@ -1173,12 +1173,6 @@ export const getKnockoutTracker = createServerFn({ method: "GET" }).handler(asyn
     .from("teams")
     .select("id, name, name_he, flag_url, logo_url, code");
 
-  // Group standings for alive/eliminated status
-  const { data: standings } = await supabaseAdmin
-    .from("standings")
-    .select("team_id, rank, played");
-  const standingsMap = new Map((standings ?? []).map((s) => [s.team_id, s]));
-
   // Knockout matches (every stage except group)
   const { data: koMatchesRaw } = await (supabaseAdmin as any)
     .from("matches")
@@ -1239,8 +1233,6 @@ export const getKnockoutTracker = createServerFn({ method: "GET" }).handler(asyn
   const champStatus = (teamId: number | null): "alive" | "eliminated" | "champion" | "no_pick" => {
     if (!teamId) return "no_pick";
     if (actualChampion === teamId) return "champion";
-    const s = standingsMap.get(teamId);
-    if (s && s.played >= 3 && s.rank > 2) return "eliminated";
     for (const m of koMatches) {
       if (m.status !== "finished") continue;
       const homeWon = (m.home_score ?? 0) > (m.away_score ?? 0);
