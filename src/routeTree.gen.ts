@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as MatchMatchIdRouteImport } from './routes/match.$matchId'
 import { Route as TournamentRouteImport } from './routes/tournament'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -21,14 +20,10 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as BracketRouteImport } from './routes/bracket'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MatchMatchIdRouteImport } from './routes/match.$matchId'
 import { Route as ApiPublicHooksRefreshLiveRouteImport } from './routes/api/public/hooks/refresh-live'
 import { Route as ApiPublicHooksRefreshRouteImport } from './routes/api/public/hooks/refresh'
 
-const MatchMatchIdRoute = MatchMatchIdRouteImport.update({
-  id: '/match/$matchId',
-  path: '/match/$matchId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TournamentRoute = TournamentRouteImport.update({
   id: '/tournament',
   path: '/tournament',
@@ -84,6 +79,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MatchMatchIdRoute = MatchMatchIdRouteImport.update({
+  id: '/match/$matchId',
+  path: '/match/$matchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksRefreshLiveRoute =
   ApiPublicHooksRefreshLiveRouteImport.update({
     id: '/api/public/hooks/refresh-live',
@@ -102,13 +102,13 @@ export interface FileRoutesByFullPath {
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/match/$matchId': typeof MatchMatchIdRoute
   '/predictions': typeof PredictionsRoute
   '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tournament': typeof TournamentRoute
+  '/match/$matchId': typeof MatchMatchIdRoute
   '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
   '/api/public/hooks/refresh-live': typeof ApiPublicHooksRefreshLiveRoute
 }
@@ -118,13 +118,13 @@ export interface FileRoutesByTo {
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/match/$matchId': typeof MatchMatchIdRoute
   '/predictions': typeof PredictionsRoute
   '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tournament': typeof TournamentRoute
+  '/match/$matchId': typeof MatchMatchIdRoute
   '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
   '/api/public/hooks/refresh-live': typeof ApiPublicHooksRefreshLiveRoute
 }
@@ -135,13 +135,13 @@ export interface FileRoutesById {
   '/bracket': typeof BracketRoute
   '/home': typeof HomeRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/match/$matchId': typeof MatchMatchIdRoute
   '/predictions': typeof PredictionsRoute
   '/profile': typeof ProfileRoute
   '/select-player': typeof SelectPlayerRoute
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tournament': typeof TournamentRoute
+  '/match/$matchId': typeof MatchMatchIdRoute
   '/api/public/hooks/refresh': typeof ApiPublicHooksRefreshRoute
   '/api/public/hooks/refresh-live': typeof ApiPublicHooksRefreshLiveRoute
 }
@@ -153,13 +153,13 @@ export interface FileRouteTypes {
     | '/bracket'
     | '/home'
     | '/leaderboard'
-    | '/match/$matchId'
     | '/predictions'
     | '/profile'
     | '/select-player'
     | '/setup'
     | '/sitemap.xml'
     | '/tournament'
+    | '/match/$matchId'
     | '/api/public/hooks/refresh'
     | '/api/public/hooks/refresh-live'
   fileRoutesByTo: FileRoutesByTo
@@ -169,13 +169,13 @@ export interface FileRouteTypes {
     | '/bracket'
     | '/home'
     | '/leaderboard'
-    | '/match/$matchId'
     | '/predictions'
     | '/profile'
     | '/select-player'
     | '/setup'
     | '/sitemap.xml'
     | '/tournament'
+    | '/match/$matchId'
     | '/api/public/hooks/refresh'
     | '/api/public/hooks/refresh-live'
   id:
@@ -185,13 +185,13 @@ export interface FileRouteTypes {
     | '/bracket'
     | '/home'
     | '/leaderboard'
-    | '/match/$matchId'
     | '/predictions'
     | '/profile'
     | '/select-player'
     | '/setup'
     | '/sitemap.xml'
     | '/tournament'
+    | '/match/$matchId'
     | '/api/public/hooks/refresh'
     | '/api/public/hooks/refresh-live'
   fileRoutesById: FileRoutesById
@@ -202,26 +202,19 @@ export interface RootRouteChildren {
   BracketRoute: typeof BracketRoute
   HomeRoute: typeof HomeRoute
   LeaderboardRoute: typeof LeaderboardRoute
-  MatchMatchIdRoute: typeof MatchMatchIdRoute
   PredictionsRoute: typeof PredictionsRoute
   ProfileRoute: typeof ProfileRoute
   SelectPlayerRoute: typeof SelectPlayerRoute
   SetupRoute: typeof SetupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TournamentRoute: typeof TournamentRoute
+  MatchMatchIdRoute: typeof MatchMatchIdRoute
   ApiPublicHooksRefreshRoute: typeof ApiPublicHooksRefreshRoute
   ApiPublicHooksRefreshLiveRoute: typeof ApiPublicHooksRefreshLiveRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/match/$matchId': {
-      id: '/match/$matchId'
-      path: '/match/$matchId'
-      fullPath: '/match/$matchId'
-      preLoaderRoute: typeof MatchMatchIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/tournament': {
       id: '/tournament'
       path: '/tournament'
@@ -299,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/match/$matchId': {
+      id: '/match/$matchId'
+      path: '/match/$matchId'
+      fullPath: '/match/$matchId'
+      preLoaderRoute: typeof MatchMatchIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/refresh-live': {
       id: '/api/public/hooks/refresh-live'
       path: '/api/public/hooks/refresh-live'
@@ -322,13 +322,13 @@ const rootRouteChildren: RootRouteChildren = {
   BracketRoute: BracketRoute,
   HomeRoute: HomeRoute,
   LeaderboardRoute: LeaderboardRoute,
-  MatchMatchIdRoute: MatchMatchIdRoute,
   PredictionsRoute: PredictionsRoute,
   ProfileRoute: ProfileRoute,
   SelectPlayerRoute: SelectPlayerRoute,
   SetupRoute: SetupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TournamentRoute: TournamentRoute,
+  MatchMatchIdRoute: MatchMatchIdRoute,
   ApiPublicHooksRefreshRoute: ApiPublicHooksRefreshRoute,
   ApiPublicHooksRefreshLiveRoute: ApiPublicHooksRefreshLiveRoute,
 }
