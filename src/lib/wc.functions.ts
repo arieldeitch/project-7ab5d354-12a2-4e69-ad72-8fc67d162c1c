@@ -20,7 +20,7 @@ export const getPlayers = createServerFn({ method: "GET" }).handler(async () => 
 });
 
 export const getMyProfile = createServerFn({ method: "GET" })
-  .validator((d: { name: string }) => z.object({ name: z.string() }).parse(d))
+  .inputValidator((d: { name: string }) => z.object({ name: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: player } = await supabaseAdmin
@@ -61,7 +61,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   });
 
 export const updatePlayerProfile = createServerFn({ method: "POST" })
-  .validator((d: { name: string; favorite_team_id?: number | null; favorite_player_id?: number | null }) =>
+  .inputValidator((d: { name: string; favorite_team_id?: number | null; favorite_player_id?: number | null }) =>
     z
       .object({
         name: z.string(),
@@ -90,7 +90,7 @@ export const getTeams = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const searchFootballPlayers = createServerFn({ method: "GET" })
-  .validator((d: { q?: string; teamId?: number | null }) =>
+  .inputValidator((d: { q?: string; teamId?: number | null }) =>
     z.object({ q: z.string().optional(), teamId: z.number().nullable().optional() }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -120,7 +120,7 @@ export const getTodayMatches = createServerFn({ method: "GET" }).handler(async (
 });
 
 export const getUpcomingMatches = createServerFn({ method: "GET" })
-  .validator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
+  .inputValidator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
@@ -134,7 +134,7 @@ export const getUpcomingMatches = createServerFn({ method: "GET" })
   });
 
 export const getMatchesByStage = createServerFn({ method: "GET" })
-  .validator((d: { stage: string }) => z.object({ stage: z.string() }).parse(d))
+  .inputValidator((d: { stage: string }) => z.object({ stage: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await (supabaseAdmin as any)
@@ -333,7 +333,7 @@ export const getMatchesByGroup = createServerFn({ method: "GET" })
 /* ---------- Predictions ---------- */
 
 export const getMyPredictions = createServerFn({ method: "GET" })
-  .validator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
+  .inputValidator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: player } = await supabaseAdmin
@@ -351,7 +351,7 @@ export const getMyPredictions = createServerFn({ method: "GET" })
   });
 
 export const savePrediction = createServerFn({ method: "POST" })
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         playerName: z.string(),
@@ -405,7 +405,7 @@ export const savePrediction = createServerFn({ method: "POST" })
 /* ---------- Bracket ---------- */
 
 export const getBracket = createServerFn({ method: "GET" })
-  .validator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
+  .inputValidator((d: { playerName: string }) => z.object({ playerName: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: player } = await supabaseAdmin
@@ -423,7 +423,7 @@ export const getBracket = createServerFn({ method: "GET" })
   });
 
 export const saveBracket = createServerFn({ method: "POST" })
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         playerName: z.string(),
