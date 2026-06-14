@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getLeaderboard } from "@/lib/wc.functions";
+import { getLeaderboard, getHeadToHead } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
+import { teamLabel } from "@/lib/team-names";
 import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/leaderboard")({
@@ -25,6 +26,9 @@ function Leaderboard() {
   const fn = useServerFn(getLeaderboard);
   const q = useQuery({ queryKey: ["lb"], queryFn: () => fn() });
   const rows = q.data ?? [];
+
+  const h2hFn = useServerFn(getHeadToHead);
+  const h2h = useQuery({ queryKey: ["h2h"], queryFn: () => h2hFn() });
 
   // Daily snapshot: compare today's ranks against start-of-day ranks
   const [prevRanks, setPrevRanks] = useState<Record<string, number>>({});
@@ -84,6 +88,9 @@ function Leaderboard() {
           <CompareRow label="נקודות בראקט" tom={tom.bracketPoints} rony={rony.bracketPoints} />
         </div>
       )}
+
+      {h2h.data && <BattleRecordSection h2h={h2h.data} />}
+      {h2h.data && <RecentBattlesSection h2h={h2h.data} />}
 
       <h2 className="text-lg font-black mb-2">🏅 כל השחקנים</h2>
       <div className="card-stadium divide-y divide-border">
@@ -198,6 +205,96 @@ function CompareRow({ label, tom, rony }: { label: string; tom: number; rony: nu
       <div className={"text-center font-black tabular-nums " + (lead === "tom" ? "text-gold text-lg" : "")}>{tom}</div>
       <div className="text-[11px] text-muted-foreground px-2">{label}</div>
       <div className={"text-center font-black tabular-nums " + (lead === "rony" ? "text-gold text-lg" : "")}>{rony}</div>
+    </div>
+  );
+}
+
+function BattleRecordSection({ h2h }: { h2h: any }) {
+  const { record, streak, tom, rony } = h2h;
+  const total = record.tomWins + record.ronyWins + record.draws;
+  if (total === 0) return null;
+  const streakName =
+    streak.player === "tom" ? tom.display_name : streak.player === "rony" ? rony.display_name : null;
+  return (
+    <div className="card-stadium p-4 mb-6">
+      <h2 className="text-lg font-black mb-4 text-center">📊 שיא הדואלים</h2>
+      <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-4 mb-3">
+        <div className="text-center">
+          <div className="text-4xl font-black">{record.tomWins}</div>
+          <div className="text-xs font-bold text-muted-foreground mt-0.5">{tom.display_name}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-4xl font-black text-muted-foreground">{record.draws}</div>
+          <div className="text-xs font-bold text-muted-foreground mt-0.5">תיקו</div>
+        </div>
+        <div className="text-center">
+          <div className="text-4xl font-black">{record.ronyWins}</div>
+          <div className="text-xs font-bold text-muted-foreground mt-0.5">{rony.display_name}</div>
+        </div>
+      </div>
+      {/* Visual win bar */}
+      {total > 0 && (
+        <div dir="ltr" className="flex h-1.5 rounded-full overflow-hidden mb-3">
+          {record.ronyWins > 0 && (
+            <div className="bg-accent" style={{ width: `${(record.ronyWins / total) * 100}%` }} />
+          )}
+          {record.draws > 0 && (
+            <div className="bg-muted-foreground/40" style={{ width: `${(record.draws / total) * 100}%` }} />
+          )}
+          {record.tomWins > 0 && (
+            <div className="bg-primary" style={{ width: `${(record.tomWins / total) * 100}%` }} />
+          )}
+        </div>
+      )}
+      {streak.count >= 2 && streakName && (
+        <div className="text-center text-sm font-black">
+          🔥 {streakName} ניצח {streak.count} דואלים ברצף
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecentBattlesSection({ h2h }: { h2h: any }) {
+  const { recentBattles, tom, rony } = h2h;
+  const navigate = useNavigate();
+  if (!recentBattles.length) return null;
+
+  const fmtDate = (iso: string) =>
+    new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short" }).format(new Date(iso));
+
+  return (
+    <div className="card-stadium p-3 mb-6">
+      <h2 className="text-lg font-black mb-3 px-1">⚔️ דואלים אחרונים</h2>
+      <div className="divide-y divide-border">
+        {recentBattles.map((b: any) => {
+          const winnerName =
+            b.winner === "tom" ? tom.display_name : b.winner === "rony" ? rony.display_name : null;
+          return (
+            <div
+              key={b.matchId}
+              onClick={() => navigate({ to: "/match/$matchId", params: { matchId: String(b.matchId) } })}
+              className="flex items-center gap-3 py-2.5 px-1 cursor-pointer hover:bg-muted/30 active:bg-muted/50 transition rounded-lg"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold truncate">
+                  {teamLabel(b.homeTeam)} נגד {teamLabel(b.awayTeam)}
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {fmtDate(b.kickoffAt)} · {tom.display_name} {b.tomPoints} נק׳ · {rony.display_name} {b.ronyPoints} נק׳
+                </div>
+              </div>
+              <div className="shrink-0 text-sm font-black">
+                {b.winner === "draw" ? (
+                  <span className="text-muted-foreground">🤝 תיקו</span>
+                ) : (
+                  <span className="text-gold">🏆 {winnerName}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

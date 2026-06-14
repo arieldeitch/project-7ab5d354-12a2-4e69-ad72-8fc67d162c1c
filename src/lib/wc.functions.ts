@@ -576,6 +576,104 @@ export const getDailyLeaderboard = createServerFn({ method: "GET" }).handler(asy
   return results.sort((a, b) => b.dailyPoints - a.dailyPoints);
 });
 
+export const getHeadToHead = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: players } = await supabaseAdmin
+    .from("players")
+    .select("id, name, display_name, avatar_emoji")
+    .in("name", ["tom", "rony"]);
+
+  const tom = players?.find((p) => p.name === "tom") ?? null;
+  const rony = players?.find((p) => p.name === "rony") ?? null;
+  if (!tom || !rony) return null;
+
+  const { data: matches } = await supabaseAdmin
+    .from("matches")
+    .select("id, kickoff_at, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
+    .eq("status", "finished")
+    .order("kickoff_at", { ascending: false });
+
+  if (!matches?.length) {
+    return {
+      tom, rony,
+      record: { tomWins: 0, ronyWins: 0, draws: 0 },
+      streak: { player: null as "tom" | "rony" | null, count: 0 },
+      recentBattles: [] as Array<{
+        matchId: number; kickoffAt: string; homeTeam: any; awayTeam: any;
+        tomPoints: number; ronyPoints: number; winner: "tom" | "rony" | "draw";
+      }>,
+    };
+  }
+
+  const matchIds = matches.map((m) => m.id);
+  const { data: scores } = await supabaseAdmin
+    .from("prediction_scores")
+    .select("player_id, match_id, total_points")
+    .in("player_id", [tom.id, rony.id])
+    .in("match_id", matchIds);
+
+  const byMatch = new Map<number, { tomPts: number; ronyPts: number }>();
+  for (const s of scores ?? []) {
+    const pts = s.total_points ?? 0;
+    if (s.player_id === tom.id) {
+      const ex = byMatch.get(s.match_id) ?? { tomPts: 0, ronyPts: 0 };
+      byMatch.set(s.match_id, { ...ex, tomPts: pts });
+    } else if (s.player_id === rony.id) {
+      const ex = byMatch.get(s.match_id) ?? { tomPts: 0, ronyPts: 0 };
+      byMatch.set(s.match_id, { ...ex, ronyPts: pts });
+    }
+  }
+
+  const battles: Array<{
+    matchId: number; kickoffAt: string; homeTeam: any; awayTeam: any;
+    tomPoints: number; ronyPoints: number; winner: "tom" | "rony" | "draw";
+  }> = [];
+  for (const m of matches) {
+    const pts = byMatch.get(m.id);
+    if (!pts) continue;
+    const winner: "tom" | "rony" | "draw" =
+      pts.tomPts > pts.ronyPts ? "tom" : pts.ronyPts > pts.tomPts ? "rony" : "draw";
+    battles.push({
+      matchId: m.id,
+      kickoffAt: (m as any).kickoff_at,
+      homeTeam: (m as any).home_team,
+      awayTeam: (m as any).away_team,
+      tomPoints: pts.tomPts,
+      ronyPoints: pts.ronyPts,
+      winner,
+    });
+  }
+
+  const record = {
+    tomWins: battles.filter((b) => b.winner === "tom").length,
+    ronyWins: battles.filter((b) => b.winner === "rony").length,
+    draws: battles.filter((b) => b.winner === "draw").length,
+  };
+
+  let streakPlayer: "tom" | "rony" | null = null;
+  let streakCount = 0;
+  for (const b of battles) {
+    if (b.winner === "draw") continue;
+    if (!streakPlayer) {
+      streakPlayer = b.winner;
+      streakCount = 1;
+    } else if (b.winner === streakPlayer) {
+      streakCount++;
+    } else {
+      break;
+    }
+  }
+
+  return {
+    tom,
+    rony,
+    record,
+    streak: { player: streakPlayer, count: streakCount },
+    recentBattles: battles.slice(0, 5),
+  };
+});
+
 /* ---------- Refresh + scoring orchestration ---------- */
 
 export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(async () => {

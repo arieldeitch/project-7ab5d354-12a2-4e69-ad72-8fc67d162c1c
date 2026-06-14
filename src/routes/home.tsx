@@ -13,6 +13,7 @@ import {
   getRecentEvents,
   refreshLiveMatches,
   getDailyLeaderboard,
+  getHeadToHead,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
@@ -48,6 +49,7 @@ function Home() {
   const eventsFn = useServerFn(getRecentEvents);
   const liveRefreshFn = useServerFn(refreshLiveMatches);
   const dailyFn = useServerFn(getDailyLeaderboard);
+  const h2hFn = useServerFn(getHeadToHead);
 
   const live = useQuery({
     queryKey: ["live"],
@@ -74,6 +76,7 @@ function Home() {
     refetchInterval: hasLive ? 30_000 : 2 * 60_000,
   });
   const lb = useQuery({ queryKey: ["lb"], queryFn: () => lbFn() });
+  const h2h = useQuery({ queryKey: ["h2h"], queryFn: () => h2hFn() });
   const daily = useQuery({
     queryKey: ["daily-lb"],
     queryFn: () => dailyFn(),
@@ -155,7 +158,11 @@ function Home() {
 
       {/* Rivalry card */}
       {(lb.data?.length ?? 0) >= 2 && (
-        <RivalryCard leader={(lb.data as any[])[0]} challenger={(lb.data as any[])[1]} />
+        <RivalryCard
+          leader={(lb.data as any[])[0]}
+          challenger={(lb.data as any[])[1]}
+          h2h={h2h.data ?? null}
+        />
       )}
 
       {noData && (
@@ -408,8 +415,23 @@ function EmptyState({ text }: { text: string }) {
   return <div className="card-stadium p-6 text-center text-sm text-muted-foreground">{text}</div>;
 }
 
-function RivalryCard({ leader, challenger }: { leader: any; challenger: any }) {
+function RivalryCard({ leader, challenger, h2h }: { leader: any; challenger: any; h2h: any | null }) {
   const gap = (leader.player.total_points ?? 0) - (challenger.player.total_points ?? 0);
+  const streak = h2h?.streak;
+  const lastBattle = h2h?.recentBattles?.[0] ?? null;
+  const streakName =
+    streak?.player === "tom"
+      ? h2h?.tom?.display_name
+      : streak?.player === "rony"
+        ? h2h?.rony?.display_name
+        : null;
+  const lastWinnerName =
+    lastBattle?.winner === "tom"
+      ? h2h?.tom?.display_name
+      : lastBattle?.winner === "rony"
+        ? h2h?.rony?.display_name
+        : null;
+  const showStreak = (streak?.count ?? 0) >= 2 && streakName;
   return (
     <div className="card-stadium p-4 mb-5">
       <div className="text-center text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">
@@ -440,6 +462,25 @@ function RivalryCard({ leader, challenger }: { leader: any; challenger: any }) {
       {gap > 0 && (
         <div className="text-center text-xs font-bold text-muted-foreground mt-2">
           🔥 {leader.player.display_name} מוביל ב-{gap} נקודות
+        </div>
+      )}
+      {(showStreak || lastBattle) && (
+        <div className="border-t border-border mt-3 pt-3 flex gap-6 justify-center">
+          {showStreak && (
+            <div className="text-center">
+              <div className="text-[10px] text-muted-foreground font-bold mb-0.5">סדרה נוכחית</div>
+              <div className="text-sm font-black">🔥 {streak.count} ניצחונות</div>
+              <div className="text-[11px] text-muted-foreground">{streakName}</div>
+            </div>
+          )}
+          {lastBattle && (
+            <div className="text-center">
+              <div className="text-[10px] text-muted-foreground font-bold mb-0.5">דואל אחרון</div>
+              <div className="text-sm font-black">
+                {lastBattle.winner === "draw" ? "🤝 תיקו" : `🏆 ${lastWinnerName}`}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
