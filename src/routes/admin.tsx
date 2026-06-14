@@ -12,7 +12,8 @@ export const Route = createFileRoute("/admin")({
 
 const KIND_HE: Record<string, string> = {
   full: "ריענון מלא",
-  live_sync: "עדכון שידור חי",
+  cron: "ריענון מתוזמן",
+  live: "עדכון שידור חי",
 };
 
 function Admin() {

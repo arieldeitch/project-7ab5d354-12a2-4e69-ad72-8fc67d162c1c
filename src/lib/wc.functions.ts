@@ -309,9 +309,11 @@ export async function syncLiveMatchesInternal(): Promise<{
         match_id: id,
         team_id: e.team?.id ?? null,
         player_id: e.player?.id ?? null,
-        // Encode assist name with :: separator so it can be displayed without a schema change
+        // For Goal events, encode assist name with :: separator (subst.assist = player going off — ignore it)
         player_name: e.player?.name
-          ? (e.assist?.name ? `${e.player.name}::${e.assist.name}` : e.player.name)
+          ? ((e.type ?? "").toLowerCase() === "goal" && e.assist?.name
+              ? `${e.player.name}::${e.assist.name}`
+              : e.player.name)
           : null,
         minute: e.time?.elapsed ?? null,
         extra_time: e.time?.extra ?? null,

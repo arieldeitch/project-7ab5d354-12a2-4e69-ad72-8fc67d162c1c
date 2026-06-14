@@ -13,9 +13,15 @@ type Ev = {
 
 type Item =
   | { kind: "event"; ev: Ev }
-  | { kind: "divider"; label: string; key: string };
+  | { kind: "divider"; icon: string; label: string; key: string };
 
-export function MatchTimeline({ events, isFinished }: { events: Ev[]; isFinished?: boolean }) {
+export function MatchTimeline({
+  events,
+  isFinished,
+}: {
+  events: Ev[];
+  isFinished?: boolean;
+}) {
   if (!events || events.length === 0) {
     return (
       <div className="text-center text-xs text-muted-foreground py-3">
@@ -25,18 +31,19 @@ export function MatchTimeline({ events, isFinished }: { events: Ev[]; isFinished
   }
 
   const items: Item[] = [];
-  let htInserted = false;
+  items.push({ kind: "divider", icon: "⚽", label: "תחילת המשחק", key: "kickoff" });
 
+  let htInserted = false;
   for (const ev of events) {
     if (!htInserted && (ev.minute ?? 0) > 45) {
       htInserted = true;
-      items.push({ kind: "divider", label: "— מחצית —", key: "ht" });
+      items.push({ kind: "divider", icon: "⏱️", label: "מחצית", key: "ht" });
     }
     items.push({ kind: "event", ev });
   }
 
   if (isFinished) {
-    items.push({ kind: "divider", label: "— סיום —", key: "ft" });
+    items.push({ kind: "divider", icon: "🏁", label: "סיום", key: "ft" });
   }
 
   return (
@@ -44,15 +51,22 @@ export function MatchTimeline({ events, isFinished }: { events: Ev[]; isFinished
       {items.map((item) => {
         if (item.kind === "divider") {
           return (
-            <li key={item.key} className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-[11px] font-black text-muted-foreground shrink-0">{item.label}</span>
-              <div className="flex-1 h-px bg-border" />
+            <li key={item.key} className="flex items-center gap-2 py-0.5">
+              <div className="flex-1 h-px bg-border/60" />
+              <span className="text-[11px] font-black text-muted-foreground shrink-0 flex items-center gap-1">
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </span>
+              <div className="flex-1 h-px bg-border/60" />
             </li>
           );
         }
+
         const e = item.ev;
         const { scorer, assist } = parsePlayerName(e.player_name);
+        const label = eventLabelHe(e);
+        const teamName = e.team ? teamLabel(e.team) : null;
+
         return (
           <li key={e.id} className="relative">
             <span className="absolute -right-[1.4rem] top-0.5 text-base leading-none">
@@ -63,17 +77,17 @@ export function MatchTimeline({ events, isFinished }: { events: Ev[]; isFinished
                 {formatMinute(e.minute, e.extra_time)}
               </span>
               <span className="font-bold truncate">
-                {scorer ?? eventLabelHe(e)}
+                {scorer ?? label}
               </span>
             </div>
             {assist && (
               <div className="text-[11px] text-muted-foreground mr-14">
-                מסייע: {assist}
+                בישול: {assist}
               </div>
             )}
             <div className="text-[11px] text-muted-foreground mr-14">
-              {eventLabelHe(e)}
-              {e.team ? ` · ${teamLabel(e.team)}` : ""}
+              {label}
+              {teamName ? ` · ${teamName}` : ""}
             </div>
           </li>
         );
