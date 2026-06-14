@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { TeamBadge } from "@/components/TeamBadge";
 import { teamLabel } from "@/lib/team-names";
 import { liveStatusLabelHe } from "@/lib/event-labels";
+import { stadiumHe, cityHe } from "@/lib/venue-names";
 
 type Team = { id: number; name: string; name_he?: string | null; flag_url?: string | null; logo_url?: string | null; code?: string | null };
 
@@ -68,10 +69,14 @@ export function MatchCard({
   const isFinished = match.status === "finished";
   const isScheduled = match.status === "scheduled";
   const hs = match.home_score ?? 0;
-  const as = match.away_score ?? 0;
-  const homeWon = isFinished && hs > as;
-  const awayWon = isFinished && as > hs;
-  const isDraw = isFinished && hs === as;
+  const as_ = match.away_score ?? 0;
+  const homeWon = isFinished && hs > as_;
+  const awayWon = isFinished && as_ > hs;
+  const isDraw = isFinished && hs === as_;
+
+  // Venue labels — prefer Hebrew translation, fall back to API string
+  const stadiumLabel = stadiumHe(match.stadium) ?? match.stadium;
+  const cityLabel = cityHe(match.city) ?? match.city;
 
   return (
     <div
@@ -94,7 +99,7 @@ export function MatchCard({
           ) : (
             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-bold">
               <span className="h-2 w-2 rounded-full bg-current animate-pulse" />
-              LIVE {match.minute ? `${match.minute}'` : ""}
+              חי {match.minute ? `${match.minute}'` : ""}
               {liveLabel && !isHT ? ` · ${liveLabel}` : ""}
             </span>
           )
@@ -105,6 +110,12 @@ export function MatchCard({
         )}
       </div>
 
+      {/*
+       * RTL layout note: the parent <html dir="rtl"> reverses flex order.
+       * DOM order [home, score, away] renders visually as [away | score | home].
+       * Score must show away_score on the left to match the left team.
+       * Display: {as_} - {hs} → reads "away_score - home_score" left to right.
+       */}
       <div className="flex items-center gap-2">
         <TeamSide team={match.home_team} winner={homeWon} loser={awayWon} />
         <div className="flex flex-col items-center min-w-[72px]">
@@ -116,9 +127,9 @@ export function MatchCard({
                 dir="ltr"
                 className="text-3xl font-black tabular-nums tracking-tighter text-gold whitespace-nowrap"
               >
-                <span>{hs}</span>
+                <span>{as_}</span>
                 <span className="text-muted-foreground mx-1">-</span>
-                <span>{as}</span>
+                <span>{hs}</span>
               </div>
               {isDraw && <span className="text-[10px] font-bold text-muted-foreground mt-0.5">תיקו</span>}
             </>
@@ -127,10 +138,10 @@ export function MatchCard({
         <TeamSide team={match.away_team} winner={awayWon} loser={homeWon} />
       </div>
 
-      {match.stadium && (
+      {stadiumLabel && (
         <div className="mt-3 text-center text-xs text-muted-foreground truncate">
-          🏟️ {match.stadium}
-          {match.city ? ` · ${match.city}` : ""}
+          🏟️ {stadiumLabel}
+          {cityLabel ? ` · ${cityLabel}` : ""}
         </div>
       )}
       {footer && <div className="mt-3">{footer}</div>}

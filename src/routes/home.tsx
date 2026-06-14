@@ -60,8 +60,8 @@ function Home() {
     refetchInterval: liveInterval,
   });
   const finished = useQuery({
-    queryKey: ["finished", 6],
-    queryFn: () => finishedFn({ data: { limit: 6 } }),
+    queryKey: ["finished", 20],
+    queryFn: () => finishedFn({ data: { limit: 20 } }),
     refetchInterval: liveInterval,
   });
   const events = useQuery({

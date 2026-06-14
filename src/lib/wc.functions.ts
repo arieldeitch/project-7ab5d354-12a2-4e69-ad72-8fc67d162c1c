@@ -607,15 +607,33 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
             goal_difference: t.goalsDiff,
             points: t.points,
           });
-          // Tag team with group too
+          // Tag team with group
           await (supabaseAdmin.from("teams") as any).update({ group_code: groupCode }).eq("id", t.team.id);
         }
       }
       if (rows.length > 0) {
-        await supabaseAdmin.from("standings").delete().in("group_code", Array.from(groupCodes));
+        const groupCodesArr = Array.from(groupCodes);
+        // Ensure group codes exist in the groups lookup table (FK constraint)
+        await (supabaseAdmin.from("groups") as any).upsert(
+          groupCodesArr.map((code) => ({ code, name: `קבוצה ${code}` })),
+          { onConflict: "code", ignoreDuplicates: true },
+        );
+        await supabaseAdmin.from("standings").delete().in("group_code", groupCodesArr);
         const { error } = await (supabaseAdmin.from("standings") as any).insert(rows);
         if (error) throw error;
         standingsCount = rows.length;
+
+        // Backfill group_code on matches using the home team's group
+        const { data: teamGroups } = await supabaseAdmin
+          .from("teams")
+          .select("id, group_code")
+          .not("group_code", "is", null);
+        for (const t of teamGroups ?? []) {
+          await (supabaseAdmin.from("matches") as any)
+            .update({ group_code: t.group_code })
+            .eq("home_team_id", t.id)
+            .eq("stage", "group");
+        }
       }
     }
 
