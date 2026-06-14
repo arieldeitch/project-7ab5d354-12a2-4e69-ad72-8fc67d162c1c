@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/public/hooks/refresh",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/public/hooks/refresh-live",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
