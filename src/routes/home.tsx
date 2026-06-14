@@ -94,7 +94,19 @@ function Home() {
 
   type MatchTab = "today" | "results" | "upcoming";
   const [tab, setTab] = useState<MatchTab>("today");
-  const todayCount = (today.data?.length ?? 0) + (hasLive ? live.data!.length : 0);
+
+  // Merge today's matches with live matches (live data is polled every 30s — fresher status)
+  const allTodayMap = new Map<number, any>();
+  (today.data ?? []).forEach((m: any) => allTodayMap.set(m.id, m));
+  (live.data ?? []).forEach((m: any) => allTodayMap.set(m.id, m));
+  const allToday = [...allTodayMap.values()].sort(
+    (a: any, b: any) => new Date(a.kickoff_at).getTime() - new Date(b.kickoff_at).getTime(),
+  );
+  const liveToday = allToday.filter((m: any) => m.status === "live");
+  const finishedToday = allToday.filter((m: any) => m.status === "finished");
+  const scheduledToday = allToday.filter((m: any) => m.status === "scheduled");
+
+  const todayCount = allToday.length;
   const resultsCount = finished.data?.length ?? 0;
   const upcomingCount = upcoming.data?.length ?? 0;
 
@@ -141,23 +153,6 @@ function Home() {
             ⚡ טען נתונים
           </button>
         </div>
-      )}
-
-      {hasLive && (
-        <Section
-          title={
-            <span className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-accent animate-pulse" />
-              משחקים חיים עכשיו
-            </span>
-          }
-        >
-          <div className="space-y-3">
-            {(live.data ?? []).map((m: any) => (
-              <MatchCard key={m.id} match={m} />
-            ))}
-          </div>
-        </Section>
       )}
 
       {(events.data?.length ?? 0) > 0 && (
@@ -215,38 +210,57 @@ function Home() {
         {tab === "today" && (
           today.isLoading ? (
             <SkeletonCards />
-          ) : todayCount === 0 ? (
+          ) : allToday.length === 0 ? (
             <EmptyState text="אין משחקים היום. עברו לטאב 'משחקים עתידיים' לראות מה מחכה!" />
           ) : (
-            <div className="space-y-3">
-              {(today.data ?? []).map((m: any) => {
-                const pred = predByMatch.get(m.id);
-                return (
-                  <MatchCard
-                    key={m.id}
-                    match={m}
-                    footer={
-                      m.status === "scheduled" ? (
-                        <Link
-                          to="/predictions"
-                          search={{ matchId: m.id } as any}
-                          className="flex items-center justify-between w-full text-xs"
-                        >
-                          <CountdownBadge kickoff={m.kickoff_at} />
-                          <span
-                            className={
-                              "px-3 py-1.5 rounded-lg font-bold " +
-                              (pred ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")
-                            }
+            <div className="space-y-5">
+              {liveToday.length > 0 && (
+                <TodayGroup
+                  title={
+                    <span className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+                      🔴 חי עכשיו
+                    </span>
+                  }
+                >
+                  {liveToday.map((m: any) => <MatchCard key={m.id} match={m} />)}
+                </TodayGroup>
+              )}
+              {finishedToday.length > 0 && (
+                <TodayGroup title="🏁 הסתיימו היום">
+                  {finishedToday.map((m: any) => <MatchCard key={m.id} match={m} />)}
+                </TodayGroup>
+              )}
+              {scheduledToday.length > 0 && (
+                <TodayGroup title="⏰ בהמשך היום">
+                  {scheduledToday.map((m: any) => {
+                    const pred = predByMatch.get(m.id);
+                    return (
+                      <MatchCard
+                        key={m.id}
+                        match={m}
+                        footer={
+                          <Link
+                            to="/predictions"
+                            search={{ matchId: m.id } as any}
+                            className="flex items-center justify-between w-full text-xs"
                           >
-                            {pred ? "✓ תחזית נמסרה — ערוך" : "📝 הוסף תחזית"}
-                          </span>
-                        </Link>
-                      ) : undefined
-                    }
-                  />
-                );
-              })}
+                            <CountdownBadge kickoff={m.kickoff_at} />
+                            <span
+                              className={
+                                "px-3 py-1.5 rounded-lg font-bold " +
+                                (pred ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")
+                              }
+                            >
+                              {pred ? "✓ תחזית נמסרה — ערוך" : "📝 הוסף תחזית"}
+                            </span>
+                          </Link>
+                        }
+                      />
+                    );
+                  })}
+                </TodayGroup>
+              )}
             </div>
           )
         )}
@@ -335,6 +349,17 @@ function StatPill({ label, value, accent }: { label: string; value: number; acce
     <div className={`${bg} rounded-2xl p-3 text-center`}>
       <div className="text-2xl font-black tabular-nums">{value}</div>
       <div className="text-[10px] font-bold uppercase tracking-wide opacity-80">{label}</div>
+    </div>
+  );
+}
+
+function TodayGroup({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+        {title}
+      </div>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 }
