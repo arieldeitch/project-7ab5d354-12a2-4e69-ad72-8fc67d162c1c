@@ -83,10 +83,22 @@ export const Route = createFileRoute("/api/public/hooks/refresh")({
                 }
               }
               if (rows.length > 0) {
-                await sb.from("standings").delete().in("group_code", Array.from(groupCodes));
+                const groupCodesArr = Array.from(groupCodes);
+                // Satisfy FK constraint: ensure group codes exist before standings insert
+                await sb.from("groups").upsert(
+                  groupCodesArr.map((code: string) => ({ code, name: `קבוצה ${code}` })),
+                  { onConflict: "code", ignoreDuplicates: true },
+                );
+                await sb.from("standings").delete().in("group_code", groupCodesArr);
                 const { error } = await sb.from("standings").insert(rows);
                 if (error) throw error;
                 counts.standings = rows.length;
+
+                // Backfill group_code on group-stage matches via home team's group
+                const { data: teamGroups } = await sb.from("teams").select("id, group_code").not("group_code", "is", null);
+                for (const t of teamGroups ?? []) {
+                  await sb.from("matches").update({ group_code: t.group_code }).eq("home_team_id", t.id).eq("stage", "group");
+                }
               }
             }
           } catch (e) {
@@ -110,6 +122,14 @@ export const Route = createFileRoute("/api/public/hooks/refresh")({
             }
           } catch (e) {
             console.warn("[refresh] topScorers failed (non-fatal)", e);
+          }
+
+          /* Recalculate prediction scores for finished matches */
+          try {
+            const { recalcAllScoresInternal } = await import("@/lib/wc.functions");
+            await recalcAllScoresInternal();
+          } catch (e) {
+            console.warn("[refresh] recalc failed (non-fatal)", e);
           }
 
           await sb.from("refresh_logs").insert({

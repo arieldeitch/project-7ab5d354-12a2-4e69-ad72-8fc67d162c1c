@@ -138,15 +138,15 @@ export const searchFootballPlayers = createServerFn({ method: "GET" })
 
 export const getTodayMatches = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  // Use explicit UTC date boundaries so behavior is deterministic regardless of server timezone
+  const now = new Date();
+  const startUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const endUTC = new Date(startUTC.getTime() + 86_400_000);
   const { data } = await supabaseAdmin
     .from("matches")
     .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
-    .gte("kickoff_at", start.toISOString())
-    .lt("kickoff_at", end.toISOString())
+    .gte("kickoff_at", startUTC.toISOString())
+    .lt("kickoff_at", endUTC.toISOString())
     .order("kickoff_at");
   return data ?? [];
 });
@@ -681,7 +681,7 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
   }
 });
 
-async function recalcAllScoresInternal() {
+export async function recalcAllScoresInternal() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { calculateScore } = await import("./scoring");
   const { data: cfg } = await supabaseAdmin.from("scoring_config").select("*").eq("id", 1).maybeSingle();
