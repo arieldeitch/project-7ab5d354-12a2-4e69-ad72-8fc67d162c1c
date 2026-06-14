@@ -502,6 +502,9 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
     predictions: number;
     exactScores: number;
     winnerHits: number;
+    winnerPointsTotal: number;
+    scorePointsTotal: number;
+    bonusPointsTotal: number;
     bracketPoints: number;
     achievements: number;
   }> = [];
@@ -510,7 +513,7 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
       supabaseAdmin.from("medals").select("kind").eq("player_id", p.id),
       supabaseAdmin
         .from("prediction_scores")
-        .select("winner_points,score_points")
+        .select("winner_points,score_points,first_scorer_points,anytime_scorer_points,totals_points,btts_points")
         .eq("player_id", p.id),
       supabaseAdmin.from("bracket_predictions").select("total_bracket_points").eq("player_id", p.id).maybeSingle(),
       supabaseAdmin.from("achievements").select("id").eq("player_id", p.id),
@@ -525,11 +528,52 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
       predictions: scores?.length ?? 0,
       exactScores: scores?.filter((s) => (s.score_points ?? 0) >= 25).length ?? 0,
       winnerHits: scores?.filter((s) => (s.winner_points ?? 0) > 0).length ?? 0,
+      winnerPointsTotal: (scores ?? []).reduce((s, r) => s + (r.winner_points ?? 0), 0),
+      scorePointsTotal: (scores ?? []).reduce((s, r) => s + (r.score_points ?? 0), 0),
+      bonusPointsTotal: (scores ?? []).reduce(
+        (s, r) =>
+          s + (r.first_scorer_points ?? 0) + (r.anytime_scorer_points ?? 0) + (r.totals_points ?? 0) + (r.btts_points ?? 0),
+        0,
+      ),
       bracketPoints: bracket?.total_bracket_points ?? 0,
       achievements: achs?.length ?? 0,
     });
   }
   return out.sort((a, b) => (b.player.total_points ?? 0) - (a.player.total_points ?? 0));
+});
+
+export const getDailyLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const now = new Date();
+  const startUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const endUTC = new Date(startUTC.getTime() + 86_400_000);
+
+  const { data: todayMatches } = await supabaseAdmin
+    .from("matches")
+    .select("id")
+    .eq("status", "finished")
+    .gte("kickoff_at", startUTC.toISOString())
+    .lt("kickoff_at", endUTC.toISOString());
+
+  if (!todayMatches?.length) return [];
+
+  const matchIds = todayMatches.map((m) => m.id);
+  const { data: players } = await supabaseAdmin.from("players").select("id, display_name, avatar_emoji, name");
+  if (!players) return [];
+
+  const results = await Promise.all(
+    players.map(async (p) => {
+      const { data: scores } = await supabaseAdmin
+        .from("prediction_scores")
+        .select("total_points")
+        .eq("player_id", p.id)
+        .in("match_id", matchIds);
+      const dailyPoints = (scores ?? []).reduce((s, r) => s + (r.total_points ?? 0), 0);
+      return { player: p, dailyPoints };
+    }),
+  );
+
+  return results.sort((a, b) => b.dailyPoints - a.dailyPoints);
 });
 
 /* ---------- Refresh + scoring orchestration ---------- */

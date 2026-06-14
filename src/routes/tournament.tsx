@@ -89,25 +89,26 @@ function Groups() {
                 <div key={code} className="card-stadium p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-black text-gold text-lg">בית {code}</h3>
-                    <span className="text-[10px] text-muted-foreground">מש׳ · נצ׳ · תק׳ · הפ׳ · שע׳ · סע׳ · הפר׳ · נק׳</span>
+                    <span className="text-[10px] text-muted-foreground hidden sm:block">מש׳ · נצ׳ · תק׳ · הפ׳ · שע׳ · סע׳ · נק׳</span>
+                    <span className="text-[10px] text-muted-foreground sm:hidden">נק׳</span>
                   </div>
                   <div className="divide-y divide-border">
                     {rows.map((r) => {
                       const dot = r.rank <= 2 ? "🟢" : r.rank === 3 ? "🟡" : "🔴";
                       return (
-                        <div key={r.team_id} className="grid grid-cols-[auto_auto_minmax(0,1fr)_repeat(7,auto)] items-center gap-1.5 py-1.5 text-[11px]">
+                        <div key={r.team_id} className="grid grid-cols-[auto_auto_1fr_auto] sm:grid-cols-[auto_auto_minmax(0,1fr)_repeat(7,auto)] items-center gap-1.5 py-1.5 text-[11px]">
                           <span className="w-4 text-center font-bold text-muted-foreground">{r.rank}</span>
                           <span className="text-xs leading-none">{dot}</span>
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <TeamBadge team={r.team} size={22} className="border" />
-                            <span className="text-xs font-bold truncate">{teamLabel(r.team)}</span>
+                            <TeamBadge team={r.team} size={22} className="border shrink-0" />
+                            <span className="text-xs font-bold leading-tight">{teamLabel(r.team)}</span>
                           </div>
-                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.played}</span>
-                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
-                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
-                          <span className="tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
-                          <span className="tabular-nums text-muted-foreground w-6 text-center">{r.goals_for}</span>
-                          <span className="tabular-nums text-muted-foreground w-6 text-center">{r.goals_against}</span>
+                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.played}</span>
+                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
+                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
+                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
+                          <span className="hidden sm:block tabular-nums text-muted-foreground w-6 text-center">{r.goals_for}</span>
+                          <span className="hidden sm:block tabular-nums text-muted-foreground w-6 text-center">{r.goals_against}</span>
                           <span className="tabular-nums font-black text-gold w-7 text-center">{r.points}</span>
                         </div>
                       );
@@ -245,7 +246,8 @@ function GroupCenter() {
       <div className="card-stadium p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-black text-gold text-lg">טבלת בית {active}</h3>
-          <span className="text-[10px] text-muted-foreground">מש׳ · נצ׳ · תק׳ · הפ׳ · שע׳ · סע׳ · הפר׳ · נק׳</span>
+          <span className="text-[10px] text-muted-foreground hidden sm:block">מש׳ · נצ׳ · תק׳ · הפ׳ · שע׳ · סע׳ · הפר׳ · נק׳</span>
+          <span className="text-[10px] text-muted-foreground sm:hidden">נק׳</span>
         </div>
         <div className="divide-y divide-border">
           {rows.map((r: any) => {
@@ -254,21 +256,21 @@ function GroupCenter() {
             return (
               <div
                 key={r.team_id}
-                className="grid grid-cols-[auto_auto_minmax(0,1fr)_repeat(8,auto)] items-center gap-1.5 py-1.5 text-[11px]"
+                className="grid grid-cols-[auto_auto_1fr_auto] sm:grid-cols-[auto_auto_minmax(0,1fr)_repeat(8,auto)] items-center gap-1.5 py-1.5 text-[11px]"
               >
                 <span className="w-4 text-center font-bold text-muted-foreground">{r.rank}</span>
                 <span className="text-xs leading-none">{dot}</span>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <TeamBadge team={r.team} size={22} className="border" />
-                  <span className="text-xs font-bold truncate">{teamLabel(r.team)}</span>
+                  <TeamBadge team={r.team} size={22} className="border shrink-0" />
+                  <span className="text-xs font-bold leading-tight">{teamLabel(r.team)}</span>
                 </div>
-                <span className="tabular-nums text-muted-foreground w-5 text-center">{r.played}</span>
-                <span className="tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
-                <span className="tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
-                <span className="tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
-                <span className="tabular-nums text-muted-foreground w-6 text-center">{r.goals_for}</span>
-                <span className="tabular-nums text-muted-foreground w-6 text-center">{r.goals_against}</span>
-                <span className="tabular-nums text-muted-foreground w-7 text-center">
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.played}</span>
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-6 text-center">{r.goals_for}</span>
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-6 text-center">{r.goals_against}</span>
+                <span className="hidden sm:block tabular-nums text-muted-foreground w-7 text-center">
                   <span dir="ltr">{gd > 0 ? `+${gd}` : gd}</span>
                 </span>
                 <span className="tabular-nums font-black text-gold w-7 text-center">{r.points}</span>

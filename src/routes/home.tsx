@@ -12,6 +12,7 @@ import {
   getLiveMatches,
   getRecentEvents,
   refreshLiveMatches,
+  getDailyLeaderboard,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
@@ -44,6 +45,7 @@ function Home() {
   const liveFn = useServerFn(getLiveMatches);
   const eventsFn = useServerFn(getRecentEvents);
   const liveRefreshFn = useServerFn(refreshLiveMatches);
+  const dailyFn = useServerFn(getDailyLeaderboard);
 
   const live = useQuery({
     queryKey: ["live"],
@@ -70,6 +72,11 @@ function Home() {
     refetchInterval: hasLive ? 30_000 : 2 * 60_000,
   });
   const lb = useQuery({ queryKey: ["lb"], queryFn: () => lbFn() });
+  const daily = useQuery({
+    queryKey: ["daily-lb"],
+    queryFn: () => dailyFn(),
+    refetchInterval: liveInterval,
+  });
   const preds = useQuery({ queryKey: ["preds", active], queryFn: () => predsFn({ data: { playerName: active! } }) });
   const profile = useQuery({ queryKey: ["profile", active], queryFn: () => profileFn({ data: { name: active! } }) });
 
@@ -143,6 +150,11 @@ function Home() {
         <StatPill label="מדליות זהב" value={profile.data?.stats.medals.gold ?? 0} accent="primary" />
         <StatPill label="הישגים" value={profile.data?.stats.achievementsCount ?? 0} accent="accent" />
       </div>
+
+      {/* Rivalry card */}
+      {(lb.data?.length ?? 0) >= 2 && (
+        <RivalryCard leader={(lb.data as any[])[0]} challenger={(lb.data as any[])[1]} />
+      )}
 
       {noData && (
         <div className="card-stadium p-6 text-center mb-6">
@@ -317,6 +329,11 @@ function Home() {
         )}
       </section>
 
+      {/* Daily winner card */}
+      {(daily.data?.some((d: any) => d.dailyPoints > 0)) && (
+        <DailyWinnerCard daily={daily.data as any[]} />
+      )}
+
       <Section title="🏅 טבלת האליפות">
         <div className="card-stadium p-3 divide-y divide-border">
           {(lb.data ?? []).map((row: any, i: number) => (
@@ -385,4 +402,83 @@ function SkeletonCards() {
 
 function EmptyState({ text }: { text: string }) {
   return <div className="card-stadium p-6 text-center text-sm text-muted-foreground">{text}</div>;
+}
+
+function RivalryCard({ leader, challenger }: { leader: any; challenger: any }) {
+  const gap = (leader.player.total_points ?? 0) - (challenger.player.total_points ?? 0);
+  return (
+    <div className="card-stadium p-4 mb-5">
+      <div className="text-center text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">
+        ⚔️ מאבק הפסגה
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 text-center">
+          <div className="text-4xl mb-1">{leader.player.avatar_emoji}</div>
+          <div className="font-black text-sm">{leader.player.display_name}</div>
+          <div className="text-xl font-black text-gold tabular-nums">{leader.player.total_points}</div>
+        </div>
+        <div className="flex flex-col items-center px-2 shrink-0">
+          {gap === 0 ? (
+            <span className="text-xs font-black text-muted-foreground">שיווי!</span>
+          ) : (
+            <>
+              <div className="text-2xl font-black text-accent tabular-nums">{gap}</div>
+              <div className="text-[10px] text-muted-foreground">נקודות הפרש</div>
+            </>
+          )}
+        </div>
+        <div className="flex-1 text-center">
+          <div className="text-4xl mb-1">{challenger.player.avatar_emoji}</div>
+          <div className="font-black text-sm">{challenger.player.display_name}</div>
+          <div className="text-xl font-black text-gold tabular-nums">{challenger.player.total_points}</div>
+        </div>
+      </div>
+      {gap > 0 && (
+        <div className="text-center text-xs font-bold text-muted-foreground mt-2">
+          🔥 {leader.player.display_name} מוביל ב-{gap} נקודות
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DailyWinnerCard({ daily }: { daily: Array<{ player: any; dailyPoints: number }> }) {
+  const withPoints = daily.filter((d) => d.dailyPoints > 0);
+  if (!withPoints.length) return null;
+  const top = withPoints[0];
+  const isTie = withPoints.length >= 2 && withPoints[0].dailyPoints === withPoints[1].dailyPoints;
+  return (
+    <Section title="🌟 ניקוד היום">
+      <div className="card-stadium p-4">
+        {isTie ? (
+          <div className="flex items-center gap-3 mb-3">
+            <div className="text-3xl">🤝</div>
+            <div>
+              <div className="font-black">תיקו! שניהם קיבלו {top.dailyPoints} נקודות היום</div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 mb-3">
+            <div className="text-4xl">{top.player.avatar_emoji}</div>
+            <div>
+              <div className="font-black text-base">{top.player.display_name}</div>
+              <div className="text-sm text-muted-foreground">
+                צבר <span className="text-gold font-black text-lg">{top.dailyPoints}</span> נקודות היום
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="divide-y divide-border">
+          {daily.map((d) => (
+            <div key={d.player.name} className="flex items-center justify-between py-1.5 text-sm">
+              <span className="font-bold">{d.player.display_name}</span>
+              <span className={`font-black tabular-nums ${d.dailyPoints > 0 ? "text-gold" : "text-muted-foreground"}`}>
+                {d.dailyPoints} נק׳
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
 }
