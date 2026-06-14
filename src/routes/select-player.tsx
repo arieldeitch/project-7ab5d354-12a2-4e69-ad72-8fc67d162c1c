@@ -15,15 +15,25 @@ function SelectPlayer() {
   const getProfile = useServerFn(getMyProfile);
 
   const pick = async (name: "tom" | "rony") => {
-    setActive(name);
     try {
       const profile = await getProfile({ data: { name } });
+      setActive(name);
       const setupDone = profile?.bracket?.champion_team_id;
-      navigate({ to: setupDone ? "/home" : "/setup" });
-    } catch {
-      // Profile fetch failed — navigate to setup so the player can still enter
+      try {
+        await navigate({ to: setupDone ? "/home" : "/setup" });
+      } catch (navErr) {
+        console.error("navigation failed after profile fetch:", navErr);
+        toast.error("בעיה במעבר לעמוד, נסה שוב");
+      }
+    } catch (err) {
+      console.error("pick() failed:", err);
       toast.error("בעיה בטעינת הפרופיל, ניסיון מחדש...");
-      navigate({ to: "/setup" });
+      try {
+        setActive(name);
+        await navigate({ to: "/setup" });
+      } catch (navErr) {
+        console.error("fallback navigation failed:", navErr);
+      }
     }
   };
 
