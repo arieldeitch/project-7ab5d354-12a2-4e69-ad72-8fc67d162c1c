@@ -1141,6 +1141,147 @@ export const getMatchDetail = createServerFn({ method: "GET" })
     return { match, predictions };
   });
 
+/* ---------- Knockout Tracker ---------- */
+
+export const getKnockoutTracker = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // Tom and Rony players
+  const { data: players } = await supabaseAdmin
+    .from("players")
+    .select("id, name, display_name, avatar_emoji")
+    .in("name", ["tom", "rony"]);
+
+  const tom = players?.find((p) => p.name === "tom") ?? null;
+  const rony = players?.find((p) => p.name === "rony") ?? null;
+  const playerIds = [tom?.id, rony?.id].filter(Boolean) as string[];
+
+  // Bracket predictions
+  const { data: brackets } =
+    playerIds.length > 0
+      ? await supabaseAdmin
+          .from("bracket_predictions")
+          .select("player_id, champion_team_id, runner_up_team_id, third_place_team_id")
+          .in("player_id", playerIds)
+      : { data: [] };
+
+  const tomBracket = brackets?.find((b) => b.player_id === tom?.id) ?? null;
+  const ronyBracket = brackets?.find((b) => b.player_id === rony?.id) ?? null;
+
+  // Teams for flag/name resolution of bracket picks
+  const { data: teams } = await supabaseAdmin
+    .from("teams")
+    .select("id, name, name_he, flag_url, logo_url, code");
+
+  // Group standings for alive/eliminated status
+  const { data: standings } = await supabaseAdmin
+    .from("standings")
+    .select("team_id, rank, played");
+  const standingsMap = new Map((standings ?? []).map((s) => [s.team_id, s]));
+
+  // Knockout matches (every stage except group)
+  const { data: koMatchesRaw } = await (supabaseAdmin as any)
+    .from("matches")
+    .select(
+      "id, stage, status, home_score, away_score, kickoff_at, home_team_id, away_team_id," +
+      "home_team:teams!matches_home_team_id_fkey(id,name,name_he,flag_url,code)," +
+      "away_team:teams!matches_away_team_id_fkey(id,name,name_he,flag_url,code)",
+    )
+    .neq("stage", "group")
+    .order("kickoff_at");
+  const koMatches: any[] = koMatchesRaw ?? [];
+
+  // KO match prediction accuracy for finished KO matches
+  const koFinishedIds = koMatches.filter((m) => m.status === "finished").map((m) => m.id as number);
+  let tomKoAcc = { correct: 0, total: 0 };
+  let ronyKoAcc = { correct: 0, total: 0 };
+  if (koFinishedIds.length > 0 && playerIds.length > 0) {
+    const { data: koScores } = await supabaseAdmin
+      .from("prediction_scores")
+      .select("player_id, winner_points")
+      .in("player_id", playerIds)
+      .in("match_id", koFinishedIds);
+    for (const s of koScores ?? []) {
+      if (s.player_id === tom?.id) {
+        tomKoAcc.total++;
+        if ((s.winner_points ?? 0) > 0) tomKoAcc.correct++;
+      } else if (s.player_id === rony?.id) {
+        ronyKoAcc.total++;
+        if ((s.winner_points ?? 0) > 0) ronyKoAcc.correct++;
+      }
+    }
+  }
+
+  // Actual tournament outcomes from finished final / 3rd-place matches
+  const finalMatch = koMatches.find((m) => m.stage === "final" && m.status === "finished") ?? null;
+  const thirdMatch = koMatches.find((m) => m.stage === "third_place" && m.status === "finished") ?? null;
+
+  let actualChampion: number | null = null;
+  let actualRunnerUp: number | null = null;
+  let actualThird: number | null = null;
+  if (finalMatch) {
+    if ((finalMatch.home_score ?? 0) > (finalMatch.away_score ?? 0)) {
+      actualChampion = finalMatch.home_team_id;
+      actualRunnerUp = finalMatch.away_team_id;
+    } else {
+      actualChampion = finalMatch.away_team_id;
+      actualRunnerUp = finalMatch.home_team_id;
+    }
+  }
+  if (thirdMatch) {
+    actualThird =
+      (thirdMatch.home_score ?? 0) >= (thirdMatch.away_score ?? 0)
+        ? thirdMatch.home_team_id
+        : thirdMatch.away_team_id;
+  }
+
+  // Determine champion pick status for a given team
+  const champStatus = (teamId: number | null): "alive" | "eliminated" | "champion" | "no_pick" => {
+    if (!teamId) return "no_pick";
+    if (actualChampion === teamId) return "champion";
+    const s = standingsMap.get(teamId);
+    if (s && s.played >= 3 && s.rank > 2) return "eliminated";
+    for (const m of koMatches) {
+      if (m.status !== "finished") continue;
+      const homeWon = (m.home_score ?? 0) > (m.away_score ?? 0);
+      if (m.home_team_id === teamId && !homeWon) return "eliminated";
+      if (m.away_team_id === teamId && homeWon) return "eliminated";
+    }
+    return "alive";
+  };
+
+  // Bracket pick accuracy: champion / runner-up / third-place confirmed correct
+  const bracketAcc = (bracket: typeof tomBracket) => {
+    let correct = 0;
+    let resolved = 0;
+    if (actualChampion !== null) { resolved++; if (bracket?.champion_team_id === actualChampion) correct++; }
+    if (actualRunnerUp !== null) { resolved++; if (bracket?.runner_up_team_id === actualRunnerUp) correct++; }
+    if (actualThird !== null) { resolved++; if (bracket?.third_place_team_id === actualThird) correct++; }
+    return { correct, resolved, total: 3 };
+  };
+
+  // Per-round progress summary
+  const KO_KEYS = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "third_place", "final"] as const;
+  const roundSummary: Record<string, { total: number; finished: number }> = {};
+  for (const stage of KO_KEYS) {
+    const ms = koMatches.filter((m) => m.stage === stage);
+    roundSummary[stage] = { total: ms.length, finished: ms.filter((m) => m.status === "finished").length };
+  }
+
+  return {
+    tom: tom
+      ? { player: tom, bracket: tomBracket, champStatus: champStatus(tomBracket?.champion_team_id ?? null), bracketAcc: bracketAcc(tomBracket), koAcc: tomKoAcc }
+      : null,
+    rony: rony
+      ? { player: rony, bracket: ronyBracket, champStatus: champStatus(ronyBracket?.champion_team_id ?? null), bracketAcc: bracketAcc(ronyBracket), koAcc: ronyKoAcc }
+      : null,
+    teams: teams ?? [],
+    koMatches,
+    roundSummary,
+    actual: { champion: actualChampion, runnerUp: actualRunnerUp, third: actualThird },
+  };
+});
+
 /* ---------- Refresh logs (admin) ---------- */
 
 export const getRefreshLogs = createServerFn({ method: "GET" }).handler(async () => {

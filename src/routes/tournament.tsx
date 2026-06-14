@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,6 +7,7 @@ import {
   getMatchesByStage,
   getMatchesByGroup,
   getAllGroupMatches,
+  getKnockoutTracker,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
@@ -368,12 +369,37 @@ function GroupCenter() {
 }
 
 function Knockout() {
-  const fn = useServerFn(getMatchesByStage);
+  const navigate = useNavigate();
+  const trackerFn = useServerFn(getKnockoutTracker);
+  const stageMatchFn = useServerFn(getMatchesByStage);
+  const tracker = useQuery({
+    queryKey: ["knockout-tracker"],
+    queryFn: () => trackerFn(),
+    refetchInterval: 2 * 60_000,
+  });
+
+  const teamMap = useMemo(
+    () => new Map((tracker.data?.teams ?? []).map((t: any) => [t.id, t])),
+    [tracker.data?.teams],
+  );
+
+  if (tracker.isLoading) return <div className="card-stadium h-64 animate-pulse" />;
+
+  const d = tracker.data;
+  const hasKoMatches = (d?.koMatches?.length ?? 0) > 0;
+
   return (
     <div className="space-y-5">
-      {KO_STAGES.map((s) => (
-        <StageBlock key={s.id} stage={s.id} label={s.label} fn={fn} />
-      ))}
+      <ChampionPicksCard tom={d?.tom ?? null} rony={d?.rony ?? null} teamMap={teamMap} />
+      <AccuracyCard tom={d?.tom ?? null} rony={d?.rony ?? null} />
+      <BracketProgressCard roundSummary={d?.roundSummary ?? {}} koMatches={d?.koMatches ?? []} navigate={navigate} />
+      {hasKoMatches && (
+        <div className="space-y-5">
+          {KO_STAGES.map((s) => (
+            <StageBlock key={s.id} stage={s.id} label={s.label} fn={stageMatchFn} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -396,6 +422,185 @@ function StageBlock({ stage, label, fn }: { stage: string; label: string; fn: an
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+const CHAMP_STATUS_CONFIG = {
+  alive:     { label: "עדיין במרוץ", icon: "🟢", cls: "text-emerald-400" },
+  eliminated: { label: "נפל",        icon: "🔴", cls: "text-destructive" },
+  champion:  { label: "אלוף! 🏆",   icon: "🏆", cls: "text-gold" },
+  no_pick:   { label: "טרם נבחר",   icon: "⭕", cls: "text-muted-foreground" },
+} as const;
+
+function ChampionPicksCard({
+  tom, rony, teamMap,
+}: { tom: any; rony: any; teamMap: Map<number, any> }) {
+  const players = [tom, rony].filter(Boolean);
+  if (!players.length) return null;
+
+  const hasPick = players.some((p: any) => p.bracket?.champion_team_id);
+
+  return (
+    <div className="card-stadium p-4">
+      <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3">
+        🏆 בחירת האלוף
+      </div>
+      <div className="space-y-4">
+        {players.map((p: any) => {
+          const team = teamMap.get(p.bracket?.champion_team_id);
+          const cfg = CHAMP_STATUS_CONFIG[p.champStatus as keyof typeof CHAMP_STATUS_CONFIG];
+          return (
+            <div key={p.player.name} className="flex items-center gap-3">
+              <span className="text-2xl shrink-0">{p.player.avatar_emoji}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-sm">{p.player.display_name}</div>
+                {team ? (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <TeamBadge team={team} size={20} className="border shrink-0" />
+                    <span className="text-sm font-bold truncate">{teamLabel(team)}</span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground mt-0.5">טרם בחר אלוף</div>
+                )}
+              </div>
+              <div className={`text-center shrink-0 ${cfg.cls}`}>
+                <div className="text-lg leading-none">{cfg.icon}</div>
+                <div className="text-[10px] font-bold mt-0.5">{cfg.label}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {!hasPick && (
+        <Link
+          to="/bracket"
+          className="mt-4 block text-center text-xs text-gold font-bold border border-gold/30 rounded-xl py-2 transition hover:bg-gold/5"
+        >
+          ✏️ עדכן את הבחירות שלך ←
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function AccuracyCard({ tom, rony }: { tom: any; rony: any }) {
+  const players = [tom, rony].filter(Boolean);
+  if (!players.length) return null;
+
+  // Prefer KO match prediction accuracy when KO matches exist; fall back to bracket pick accuracy
+  const hasKoPreds = players.some((p: any) => p.koAcc.total > 0);
+  const hasBracketResolved = players.some((p: any) => p.bracketAcc.resolved > 0);
+  const hasData = hasKoPreds || hasBracketResolved;
+
+  return (
+    <div className="card-stadium p-4">
+      <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3">
+        🎯 דיוק בנוקאאוט
+      </div>
+      {!hasData ? (
+        <div className="text-center text-sm text-muted-foreground py-2">
+          נתוני דיוק יופיעו כשמשחקי הנוקאאוט יתחילו
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {players.map((p: any) => {
+            const { correct, total } = hasKoPreds
+              ? { correct: p.koAcc.correct, total: p.koAcc.total }
+              : { correct: p.bracketAcc.correct, total: p.bracketAcc.resolved };
+            const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+            return (
+              <div key={p.player.name} className="flex items-center gap-3">
+                <span className="text-2xl shrink-0">{p.player.avatar_emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-sm">{p.player.display_name}</div>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="text-lg font-black text-gold tabular-nums">{correct} / {total}</span>
+                    <span className="text-xs text-muted-foreground">נכון</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5 mt-1.5">
+                    <div className="h-1.5 rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+                <span className="text-lg font-black text-gold tabular-nums shrink-0">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const KO_STAGE_LABELS: Record<string, string> = {
+  round_of_32: "שלב ה-32",
+  round_of_16: "שמינית הגמר",
+  quarter_final: "רבע הגמר",
+  semi_final: "חצי הגמר",
+  third_place: "מקום שלישי",
+  final: "הגמר 🏆",
+};
+
+function BracketProgressCard({
+  roundSummary, koMatches, navigate,
+}: { roundSummary: Record<string, { total: number; finished: number }>; koMatches: any[]; navigate: any }) {
+  const stagesWithData = Object.entries(roundSummary).filter(([, v]) => v.total > 0);
+
+  const finalWinner = (() => {
+    const f = koMatches.find((m) => m.stage === "final" && m.status === "finished");
+    if (!f) return null;
+    return (f.home_score ?? 0) > (f.away_score ?? 0) ? f.home_team : f.away_team;
+  })();
+
+  return (
+    <div className="card-stadium p-4">
+      <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3">
+        🔢 מסלול הנוקאאוט
+      </div>
+      {stagesWithData.length === 0 ? (
+        <div className="text-center text-sm text-muted-foreground py-2">
+          הנוקאאוט יתחיל בסוף שלב הבתים · {new Date("2026-07-02").toLocaleDateString("he-IL")}
+        </div>
+      ) : (
+        <div className="divide-y divide-border/60">
+          {stagesWithData.map(([stage, summary]) => {
+            const { total, finished } = summary;
+            const isDone = finished === total && total > 0;
+            const isActive = finished > 0 && !isDone;
+            return (
+              <div key={stage} className="flex items-center gap-3 py-2.5">
+                <span className="text-lg shrink-0">
+                  {isDone ? "✅" : isActive ? "🔄" : "⏳"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm">{KO_STAGE_LABELS[stage] ?? stage}</div>
+                  <div className="text-[11px] text-muted-foreground tabular-nums">
+                    {finished} / {total} הסתיימו
+                  </div>
+                </div>
+                <span className={`text-xs font-bold shrink-0 ${isDone ? "text-emerald-400" : isActive ? "text-accent" : "text-muted-foreground"}`}>
+                  {isDone ? "הושלם" : isActive ? "מתמשך" : "ממתין"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {finalWinner && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="text-[10px] font-black text-gold uppercase tracking-widest mb-2">🏆 אלוף העולם</div>
+          <button
+            onClick={() => {
+              const f = koMatches.find((m) => m.stage === "final" && m.status === "finished");
+              if (f) navigate({ to: "/match/$matchId", params: { matchId: String(f.id) } });
+            }}
+            className="flex items-center gap-2 trophy-glow w-full rounded-xl p-2.5 justify-center"
+          >
+            <TeamBadge team={finalWinner} size={28} className="border" />
+            <span className="font-black text-base">{teamLabel(finalWinner)}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
