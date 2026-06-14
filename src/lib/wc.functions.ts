@@ -146,7 +146,7 @@ export const getMatchesByStage = createServerFn({ method: "GET" })
   });
 
 export const getFinishedMatches = createServerFn({ method: "GET" })
-  .inputValidator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
+  .validator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
@@ -161,7 +161,7 @@ export const getFinishedMatches = createServerFn({ method: "GET" })
 /* ---------- Events ---------- */
 
 export const getMatchEvents = createServerFn({ method: "GET" })
-  .inputValidator((d: { matchId: number }) => z.object({ matchId: z.number() }).parse(d))
+  .validator((d: { matchId: number }) => z.object({ matchId: z.number() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
@@ -185,7 +185,7 @@ export const getLiveMatches = createServerFn({ method: "GET" }).handler(async ()
 });
 
 export const getRecentEvents = createServerFn({ method: "GET" })
-  .inputValidator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
+  .validator((d: { limit?: number }) => z.object({ limit: z.number().optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await supabaseAdmin
@@ -319,7 +319,7 @@ export const getStandings = createServerFn({ method: "GET" }).handler(async () =
 });
 
 export const getMatchesByGroup = createServerFn({ method: "GET" })
-  .inputValidator((d: { group: string }) => z.object({ group: z.string() }).parse(d))
+  .validator((d: { group: string }) => z.object({ group: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows } = await (supabaseAdmin as any)

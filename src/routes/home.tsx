@@ -153,7 +153,7 @@ function Home() {
           }
         >
           <div className="space-y-3">
-            {live.data!.map((m: any) => (
+            {(live.data ?? []).map((m: any) => (
               <MatchCard key={m.id} match={m} />
             ))}
           </div>
@@ -163,7 +163,7 @@ function Home() {
       {(events.data?.length ?? 0) > 0 && (
         <Section title="📣 מה חדש במונדיאל?">
           <ol className="card-stadium divide-y divide-border overflow-hidden">
-            {events.data!.slice(0, 8).map((e: any) => {
+            {(events.data ?? []).slice(0, 8).map((e: any) => {
               const m = e.match;
               const ht = teamLabel(m?.home_team);
               const at = teamLabel(m?.away_team);
@@ -219,7 +219,7 @@ function Home() {
             <EmptyState text="אין משחקים היום. עברו לטאב 'משחקים עתידיים' לראות מה מחכה!" />
           ) : (
             <div className="space-y-3">
-              {today.data!.map((m: any) => {
+              {(today.data ?? []).map((m: any) => {
                 const pred = predByMatch.get(m.id);
                 return (
                   <MatchCard
@@ -258,7 +258,7 @@ function Home() {
             <EmptyState text="עוד לא הסתיימו משחקים. תכף תתחיל הפעולה!" />
           ) : (
             <div className="space-y-3">
-              {finished.data!.map((m: any) => (
+              {(finished.data ?? []).map((m: any) => (
                 <MatchCard key={m.id} match={m} />
               ))}
             </div>
@@ -272,7 +272,7 @@ function Home() {
             <EmptyState text="כרגע אין משחקים עתידיים מתוזמנים." />
           ) : (
             <div className="space-y-3">
-              {upcoming.data!.map((m: any) => {
+              {(upcoming.data ?? []).map((m: any) => {
                 const pred = predByMatch.get(m.id);
                 return (
                   <MatchCard

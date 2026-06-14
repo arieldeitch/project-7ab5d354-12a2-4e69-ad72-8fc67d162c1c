@@ -62,18 +62,23 @@ function Setup() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const finish = async () => {
-    await updateFn({ data: { name: playerName, favorite_team_id: favTeam, favorite_player_id: favPlayer } });
-    await saveBracketFn({
-      data: {
-        playerName,
-        champion_team_id: champion,
-        golden_boot_player_id: goldenBoot,
-        mvp_player_id: mvp,
-      },
-    });
-    setCelebrate(Date.now());
-    toast.success("הפרופיל מוכן! קדימה למונדיאל");
-    setTimeout(() => navigate({ to: "/home" }), 1400);
+    try {
+      await updateFn({ data: { name: playerName, favorite_team_id: favTeam, favorite_player_id: favPlayer } });
+      await saveBracketFn({
+        data: {
+          playerName,
+          champion_team_id: champion,
+          golden_boot_player_id: goldenBoot,
+          mvp_player_id: mvp,
+        },
+      });
+      setCelebrate(Date.now());
+      toast.success("הפרופיל מוכן! קדימה למונדיאל");
+      setTimeout(() => navigate({ to: "/home" }), 1400);
+    } catch (e) {
+      toast.error("בעיה בשמירת הפרופיל, נסה שוב");
+      console.error("finish() failed:", e);
+    }
   };
 
   const runRefresh = async () => {
