@@ -79,9 +79,10 @@ export type AfTopScorer = {
 };
 
 export type AfEvent = {
-  time: { elapsed: number | null };
+  time: { elapsed: number | null; extra?: number | null };
   team: { id: number };
   player: { id: number | null; name: string | null };
+  assist?: { id: number | null; name: string | null };
   type: string;
   detail: string;
 };

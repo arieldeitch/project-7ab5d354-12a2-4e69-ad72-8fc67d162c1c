@@ -1,10 +1,11 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getMatchDetail } from "@/lib/wc.functions";
+import { getMatchDetail, getMatchEvents } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
 import { MatchCard } from "@/components/MatchCard";
+import { MatchTimeline } from "@/components/MatchTimeline";
 import { teamLabel } from "@/lib/team-names";
 
 const STAGE_HE: Record<string, string> = {
@@ -36,11 +37,19 @@ function MatchDetail() {
   const { matchId } = Route.useParams();
   const router = useRouter();
   const fn = useServerFn(getMatchDetail);
+  const eventsFn = useServerFn(getMatchEvents);
 
   const q = useQuery({
     queryKey: ["match-detail", matchId],
     queryFn: () => fn({ data: { matchId: Number(matchId) } }),
     refetchInterval: (data) => ((data as any)?.match?.status === "live" ? 30_000 : false),
+  });
+
+  const eventsQ = useQuery({
+    queryKey: ["match-events", matchId],
+    queryFn: () => eventsFn({ data: { matchId: Number(matchId) } }),
+    refetchInterval: () => (q.data?.match?.status === "live" ? 30_000 : false),
+    enabled: !!q.data,
   });
 
   const match = q.data?.match;
@@ -103,6 +112,19 @@ function MatchDetail() {
               ))}
             </div>
           </section>
+
+          {/* Section 3 — Match events */}
+          {(match.status === "live" || match.status === "finished") && (
+            <section className="mb-6">
+              <h2 className="text-lg font-black mb-3 flex items-center gap-2">📋 אירועי המשחק</h2>
+              <div className="card-stadium p-4">
+                <MatchTimeline
+                  events={(eventsQ.data ?? []) as any[]}
+                  isFinished={match.status === "finished"}
+                />
+              </div>
+            </section>
+          )}
 
           {/* Section 4 — Battle result */}
           {match.status === "finished" && (

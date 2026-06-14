@@ -39,8 +39,15 @@ export function eventLabelHe(e: { event_type: string; detail?: string | null }):
   }
   if (t === "card") return d.includes("red") ? "כרטיס אדום" : "כרטיס צהוב";
   if (t === "subst") return "חילוף";
-  if (t === "var") return "VAR";
-  return e.detail ?? e.event_type;
+  if (t === "var") return "ביקורת וידאו";
+  return "אירוע לא ידוע";
+}
+
+export function parsePlayerName(playerName: string | null | undefined): { scorer: string | null; assist: string | null } {
+  if (!playerName) return { scorer: null, assist: null };
+  const sep = playerName.indexOf("::");
+  if (sep === -1) return { scorer: playerName, assist: null };
+  return { scorer: playerName.slice(0, sep) || null, assist: playerName.slice(sep + 2) || null };
 }
 
 export function formatMinute(minute: number | null | undefined, extra: number | null | undefined): string {

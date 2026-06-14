@@ -20,7 +20,7 @@ import { AppShell } from "@/components/AppShell";
 import { MatchCard, CountdownBadge } from "@/components/MatchCard";
 import { usePlayer, PLAYER_META } from "@/lib/player-context";
 import { toast } from "sonner";
-import { eventIcon, eventLabelHe, formatMinute } from "@/lib/event-labels";
+import { eventIcon, eventLabelHe, formatMinute, parsePlayerName } from "@/lib/event-labels";
 import { teamLabel } from "@/lib/team-names";
 import { useEffect, useState } from "react";
 
@@ -75,15 +75,15 @@ function Home() {
     queryFn: () => eventsFn({ data: { limit: 25 } }),
     refetchInterval: hasLive ? 30_000 : 2 * 60_000,
   });
-  const lb = useQuery({ queryKey: ["lb"], queryFn: () => lbFn() });
-  const h2h = useQuery({ queryKey: ["h2h"], queryFn: () => h2hFn() });
+  const lb = useQuery({ queryKey: ["lb"], queryFn: () => lbFn(), refetchInterval: liveInterval });
+  const h2h = useQuery({ queryKey: ["h2h"], queryFn: () => h2hFn(), refetchInterval: liveInterval });
   const daily = useQuery({
     queryKey: ["daily-lb"],
     queryFn: () => dailyFn(),
     refetchInterval: liveInterval,
   });
-  const preds = useQuery({ queryKey: ["preds", active], queryFn: () => predsFn({ data: { playerName: active! } }) });
-  const profile = useQuery({ queryKey: ["profile", active], queryFn: () => profileFn({ data: { name: active! } }) });
+  const preds = useQuery({ queryKey: ["preds", active], queryFn: () => predsFn({ data: { playerName: active! } }), refetchInterval: liveInterval });
+  const profile = useQuery({ queryKey: ["profile", active], queryFn: () => profileFn({ data: { name: active! } }), refetchInterval: liveInterval });
 
   // While there are live matches, also hammer the server-side live sync every minute
   // so the API quota is used to keep the feed fresh.
@@ -183,14 +183,20 @@ function Home() {
               const m = e.match;
               const ht = teamLabel(m?.home_team);
               const at = teamLabel(m?.away_team);
+              const { scorer, assist } = parsePlayerName(e.player_name);
               return (
                 <li key={e.id} className="flex items-center gap-3 p-3 text-sm">
                   <span className="text-xl leading-none">{eventIcon(e)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold truncate">
-                      {e.player_name ?? eventLabelHe(e)}
+                      {scorer ?? eventLabelHe(e)}
                       {e.team ? ` · ${teamLabel(e.team)}` : ""}
                     </div>
+                    {assist && (
+                      <div className="text-[11px] text-gold/80 truncate">
+                        מסייע: {assist}
+                      </div>
+                    )}
                     <div className="text-[11px] text-muted-foreground truncate">
                       {eventLabelHe(e)} · {ht} <span dir="ltr">{m?.home_score ?? "-"}:{m?.away_score ?? "-"}</span> {at}
                     </div>

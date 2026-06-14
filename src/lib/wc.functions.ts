@@ -138,10 +138,14 @@ export const searchFootballPlayers = createServerFn({ method: "GET" })
 
 export const getTodayMatches = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  // Use explicit UTC date boundaries so behavior is deterministic regardless of server timezone
+  // Anchor to Israel time (UTC+3). WC 2026 is in North America so evening matches
+  // there fall on the next UTC date. The 36-hour window from Israel midnight covers
+  // all matches through midnight Pacific Time for a given Israeli calendar day.
   const now = new Date();
-  const startUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const endUTC = new Date(startUTC.getTime() + 86_400_000);
+  const ISRAEL_OFFSET_MS = 3 * 60 * 60 * 1000;
+  const nowIL = new Date(now.getTime() + ISRAEL_OFFSET_MS);
+  const startUTC = new Date(Date.UTC(nowIL.getUTCFullYear(), nowIL.getUTCMonth(), nowIL.getUTCDate()) - ISRAEL_OFFSET_MS);
+  const endUTC = new Date(startUTC.getTime() + 36 * 60 * 60 * 1000);
   const { data } = await supabaseAdmin
     .from("matches")
     .select("*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)")
@@ -305,17 +309,20 @@ export async function syncLiveMatchesInternal(): Promise<{
         match_id: id,
         team_id: e.team?.id ?? null,
         player_id: e.player?.id ?? null,
-        player_name: e.player?.name ?? null,
+        // Encode assist name with :: separator so it can be displayed without a schema change
+        player_name: e.player?.name
+          ? (e.assist?.name ? `${e.player.name}::${e.assist.name}` : e.player.name)
+          : null,
         minute: e.time?.elapsed ?? null,
         extra_time: e.time?.extra ?? null,
         event_type: e.type ?? "Unknown",
         detail: e.detail ?? null,
       }));
-      // Dedup index makes upsert idempotent
+      // ignoreDuplicates: false so player_name gets updated when assist info arrives mid-match
       const { error } = await (supabaseAdmin.from("match_events") as any).upsert(rows, {
         onConflict:
           "match_id,event_type,team_id,player_id,minute,extra_time,detail",
-        ignoreDuplicates: true,
+        ignoreDuplicates: false,
       });
       if (error) {
         // Fallback: ignore unique violation
@@ -545,8 +552,10 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
 export const getDailyLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const now = new Date();
-  const startUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const endUTC = new Date(startUTC.getTime() + 86_400_000);
+  const ISRAEL_OFFSET_MS = 3 * 60 * 60 * 1000;
+  const nowIL = new Date(now.getTime() + ISRAEL_OFFSET_MS);
+  const startUTC = new Date(Date.UTC(nowIL.getUTCFullYear(), nowIL.getUTCMonth(), nowIL.getUTCDate()) - ISRAEL_OFFSET_MS);
+  const endUTC = new Date(startUTC.getTime() + 36 * 60 * 60 * 1000);
 
   const { data: todayMatches } = await supabaseAdmin
     .from("matches")

@@ -24,11 +24,11 @@ function todayKey() {
 
 function Leaderboard() {
   const fn = useServerFn(getLeaderboard);
-  const q = useQuery({ queryKey: ["lb"], queryFn: () => fn() });
+  const q = useQuery({ queryKey: ["lb"], queryFn: () => fn(), refetchInterval: 2 * 60_000 });
   const rows = q.data ?? [];
 
   const h2hFn = useServerFn(getHeadToHead);
-  const h2h = useQuery({ queryKey: ["h2h"], queryFn: () => h2hFn() });
+  const h2h = useQuery({ queryKey: ["h2h"], queryFn: () => h2hFn(), refetchInterval: 2 * 60_000 });
 
   // Daily snapshot: compare today's ranks against start-of-day ranks
   const [prevRanks, setPrevRanks] = useState<Record<string, number>>({});
