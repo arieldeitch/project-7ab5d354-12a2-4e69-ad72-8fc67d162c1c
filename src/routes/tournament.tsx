@@ -5,9 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   getStandings,
   getMatchesByStage,
-  getFinishedMatches,
-  getUpcomingMatches,
   getMatchesByGroup,
+  getAllGroupMatches,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
@@ -60,64 +59,140 @@ function Tournament() {
 function Groups() {
   const navigate = useNavigate();
   const toMatch = (id: number) => navigate({ to: "/match/$matchId", params: { matchId: String(id) } });
-  const fn = useServerFn(getStandings);
-  const finishedFn = useServerFn(getFinishedMatches);
-  const upcomingFn = useServerFn(getUpcomingMatches);
-  const q = useQuery({ queryKey: ["standings"], queryFn: () => fn() });
-  const finished = useQuery({ queryKey: ["finished", 10], queryFn: () => finishedFn({ data: { limit: 10 } }) });
-  const upcoming = useQuery({ queryKey: ["upcoming", 8], queryFn: () => upcomingFn({ data: { limit: 8 } }) });
+  const standingsFn = useServerFn(getStandings);
+  const groupMatchesFn = useServerFn(getAllGroupMatches);
+  const q = useQuery({ queryKey: ["standings"], queryFn: () => standingsFn() });
+  const gm = useQuery({ queryKey: ["all-group-matches"], queryFn: () => groupMatchesFn() });
+
   const byGroup = new Map<string, any[]>();
   for (const s of q.data ?? []) {
     if (!byGroup.has(s.group_code)) byGroup.set(s.group_code, []);
     byGroup.get(s.group_code)!.push(s);
   }
+
+  const finishedByGroup = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const m of gm.data ?? []) {
+      if (m.status !== "finished" || !m.group_code) continue;
+      if (!map.has(m.group_code)) map.set(m.group_code, []);
+      map.get(m.group_code)!.push(m);
+    }
+    return map;
+  }, [gm.data]);
+
   if (q.isLoading) {
     return <div className="card-stadium h-64 animate-pulse" />;
   }
   const hasStandings = byGroup.size > 0;
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {hasStandings ? (
         <>
-          <div className="card-stadium p-3 text-[11px] text-muted-foreground flex items-center justify-center gap-3 flex-wrap">
-            <span>🟢 מעפילה כרגע</span>
-            <span>🟡 במאבק על העלייה</span>
-            <span>🔴 מחוץ לתמונה</span>
+          <div className="card-stadium p-3 text-[11px] text-muted-foreground flex items-center justify-center gap-4 flex-wrap">
+            <span>🟢 מעפילה</span>
+            <span>🟡 במאבק</span>
+            <span>🔴 בחוץ</span>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 gap-4">
             {Array.from(byGroup.entries())
               .sort(([a], [b]) => a.localeCompare(b))
-              .map(([code, rows]) => (
-                <div key={code} className="card-stadium p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-black text-gold text-lg">בית {code}</h3>
-                    <span className="text-[10px] text-muted-foreground hidden sm:block">מש׳ · נצ׳ · תק׳ · הפ׳ · שע׳ · סע׳ · נק׳</span>
-                    <span className="text-[10px] text-muted-foreground sm:hidden">נק׳</span>
-                  </div>
-                  <div className="divide-y divide-border">
-                    {rows.map((r) => {
-                      const dot = r.rank <= 2 ? "🟢" : r.rank === 3 ? "🟡" : "🔴";
-                      return (
-                        <div key={r.team_id} className="grid grid-cols-[auto_auto_1fr_auto] sm:grid-cols-[auto_auto_minmax(0,1fr)_repeat(7,auto)] items-center gap-1.5 py-1.5 text-[11px]">
-                          <span className="w-4 text-center font-bold text-muted-foreground">{r.rank}</span>
-                          <span className="text-xs leading-none">{dot}</span>
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <TeamBadge team={r.team} size={22} className="border shrink-0" />
-                            <span className="text-xs font-bold leading-tight">{teamLabel(r.team)}</span>
+              .map(([code, rows]) => {
+                const recentMatches = (finishedByGroup.get(code) ?? []).slice(0, 3);
+                return (
+                  <div key={code} className="card-stadium overflow-hidden">
+                    {/* Group header */}
+                    <div className="px-4 pt-3 pb-1">
+                      <h3 className="font-black text-gold text-xl">בית {code}</h3>
+                    </div>
+
+                    {/* Column headers — same grid as data rows for alignment */}
+                    <div
+                      className="grid items-center px-2 pb-1 gap-x-2 text-[10px] text-muted-foreground border-b border-border"
+                      style={{ gridTemplateColumns: "1.75rem 1fr auto auto auto auto auto" }}
+                    >
+                      <span />
+                      <span />
+                      <span className="hidden sm:block w-5 text-center">נצ׳</span>
+                      <span className="hidden sm:block w-5 text-center">ת׳</span>
+                      <span className="hidden sm:block w-5 text-center">הפ׳</span>
+                      <span className="w-7 text-center">הפר׳</span>
+                      <span className="w-8 text-center font-bold">נק׳</span>
+                    </div>
+
+                    {/* Standings rows */}
+                    <div className="divide-y divide-border/60 px-2">
+                      {rows.map((r) => {
+                        const qualifier = r.rank <= 2 ? "🟢" : r.rank === 3 ? "🟡" : "🔴";
+                        const gd = (r.goals_for ?? 0) - (r.goals_against ?? 0);
+                        return (
+                          <div
+                            key={r.team_id}
+                            className="grid items-center py-2 gap-x-2 text-[12px]"
+                            style={{ gridTemplateColumns: "1.75rem 1fr auto auto auto auto auto" }}
+                          >
+                            {/* Rank — dominant */}
+                            <span className="text-base font-black text-center leading-none">{r.rank}</span>
+
+                            {/* Team: flag + name + qualifier */}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <TeamBadge team={r.team} size={24} className="border shrink-0" />
+                              <span className="font-bold leading-tight truncate">{teamLabel(r.team)}</span>
+                              <span className="text-[10px] leading-none shrink-0">{qualifier}</span>
+                            </div>
+
+                            {/* W D L — desktop only */}
+                            <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
+                            <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
+                            <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
+
+                            {/* GD — always visible */}
+                            <span className="tabular-nums text-muted-foreground w-7 text-center" dir="ltr">
+                              {gd > 0 ? `+${gd}` : gd}
+                            </span>
+
+                            {/* Points — emphasized */}
+                            <span className="tabular-nums font-black text-gold text-base w-8 text-center">{r.points}</span>
                           </div>
-                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.played}</span>
-                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.wins}</span>
-                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.draws}</span>
-                          <span className="hidden sm:block tabular-nums text-muted-foreground w-5 text-center">{r.losses}</span>
-                          <span className="hidden sm:block tabular-nums text-muted-foreground w-6 text-center">{r.goals_for}</span>
-                          <span className="hidden sm:block tabular-nums text-muted-foreground w-6 text-center">{r.goals_against}</span>
-                          <span className="tabular-nums font-black text-gold w-7 text-center">{r.points}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+
+                    {/* Latest completed matches */}
+                    {recentMatches.length > 0 && (
+                      <div className="border-t border-border/60 mt-1 px-3 py-2 bg-muted/30 space-y-1">
+                        <div className="text-[10px] font-bold text-muted-foreground mb-1.5">🏁 תוצאות אחרונות</div>
+                        {recentMatches.map((m: any) => {
+                          const hs = m.home_score ?? 0;
+                          const as_ = m.away_score ?? 0;
+                          return (
+                            <button
+                              key={m.id}
+                              onClick={() => toMatch(m.id)}
+                              className="w-full flex items-center gap-2 py-0.5 hover:opacity-80 active:scale-[0.98] transition text-[11px]"
+                            >
+                              {/* DOM order: home, score-pill, away → RTL renders away | pill | home */}
+                              <div className="flex items-center gap-1 flex-1 min-w-0 justify-end">
+                                <span className="font-bold truncate">{teamLabel(m.home_team)}</span>
+                                <TeamBadge team={m.home_team} size={16} className="border shrink-0" />
+                              </div>
+                              <span
+                                dir="ltr"
+                                className="shrink-0 tabular-nums font-black bg-card border border-border rounded-md px-2 py-0.5 text-[11px]"
+                              >
+                                {as_} – {hs}
+                              </span>
+                              <div className="flex items-center gap-1 flex-1 min-w-0">
+                                <TeamBadge team={m.away_team} size={16} className="border shrink-0" />
+                                <span className="font-bold truncate">{teamLabel(m.away_team)}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </>
       ) : (
@@ -125,30 +200,8 @@ function Groups() {
           <div className="text-4xl mb-2">⚽</div>
           <h3 className="font-black mb-1">דירוג הבתים בדרך</h3>
           <p className="text-sm text-muted-foreground">
-            הטבלאות יתעדכנו אוטומטית עם תחילת המשחקים. בינתיים — הנה כל מה שכבר קרה ומה שיהיה.
+            הטבלאות יתעדכנו אוטומטית עם תחילת המשחקים.
           </p>
-        </div>
-      )}
-
-      {(finished.data?.length ?? 0) > 0 && (
-        <div>
-          <h3 className="text-lg font-black text-gold mb-2">🏁 תוצאות אחרונות</h3>
-          <div className="space-y-2">
-            {finished.data!.slice(0, 6).map((m: any) => (
-              <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(upcoming.data?.length ?? 0) > 0 && (
-        <div>
-          <h3 className="text-lg font-black text-gold mb-2">⏭️ המשחקים הבאים</h3>
-          <div className="space-y-2">
-            {upcoming.data!.slice(0, 6).map((m: any) => (
-              <MatchCard key={m.id} match={m} onClick={() => toMatch(m.id)} />
-            ))}
-          </div>
         </div>
       )}
     </div>

@@ -336,9 +336,10 @@ export async function syncLiveMatchesInternal(): Promise<{
     }
   }
 
-  // 5. If anything just finished, recalc scoring (cheap: only finished matches)
+  // 5. If anything just finished, recalc scoring and group standings
   if (finished > 0) {
     await recalcAllScoresInternal();
+    await recalcGroupStandingsInternal();
   }
 
   return { matches: allFx.length, events: eventCount, finished };
@@ -370,6 +371,16 @@ export const getMatchesByGroup = createServerFn({ method: "GET" })
       .order("kickoff_at");
     return rows ?? [];
   });
+
+export const getAllGroupMatches = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await (supabaseAdmin as any)
+    .from("matches")
+    .select("id, kickoff_at, status, home_score, away_score, group_code, home_team:teams!matches_home_team_id_fkey(id,name,name_he,code,flag_url,logo_url), away_team:teams!matches_away_team_id_fkey(id,name,name_he,code,flag_url,logo_url)")
+    .eq("stage", "group")
+    .order("kickoff_at", { ascending: false });
+  return data ?? [];
+});
 
 /* ---------- Predictions ---------- */
 
@@ -834,6 +845,100 @@ export const refreshWorldCupData = createServerFn({ method: "POST" }).handler(as
   }
 });
 
+/**
+ * Recomputes group standings from completed match data in the DB.
+ * Called whenever live matches finish so the standings table stays current
+ * between the 6-hour full API refreshes.
+ */
+export async function recalcGroupStandingsInternal() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: teams } = await supabaseAdmin
+    .from("teams")
+    .select("id, group_code")
+    .not("group_code", "is", null);
+
+  if (!teams?.length) return;
+
+  const { data: matches } = await supabaseAdmin
+    .from("matches")
+    .select("home_team_id, away_team_id, home_score, away_score")
+    .eq("stage", "group")
+    .eq("status", "finished")
+    .not("home_score", "is", null)
+    .not("away_score", "is", null);
+
+  type Stats = { played: number; wins: number; draws: number; losses: number; gf: number; ga: number };
+  const statMap = new Map<number, Stats>();
+  const groupMap = new Map<number, string>();
+
+  for (const t of teams) {
+    if (!t.group_code) continue;
+    groupMap.set(t.id, t.group_code);
+    statMap.set(t.id, { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0 });
+  }
+
+  for (const m of matches ?? []) {
+    if (m.home_team_id == null || m.away_team_id == null) continue;
+    const hs = statMap.get(m.home_team_id);
+    const as_ = statMap.get(m.away_team_id);
+    if (!hs || !as_) continue;
+    const hg = m.home_score as number;
+    const ag = m.away_score as number;
+    hs.played++; hs.gf += hg; hs.ga += ag;
+    as_.played++; as_.gf += ag; as_.ga += hg;
+    if (hg > ag) { hs.wins++; as_.losses++; }
+    else if (hg === ag) { hs.draws++; as_.draws++; }
+    else { hs.losses++; as_.wins++; }
+  }
+
+  const byGroup = new Map<string, Array<{ team_id: number; s: Stats }>>();
+  for (const [team_id, s] of statMap.entries()) {
+    const gc = groupMap.get(team_id);
+    if (!gc) continue;
+    if (!byGroup.has(gc)) byGroup.set(gc, []);
+    byGroup.get(gc)!.push({ team_id, s });
+  }
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (const [group_code, members] of byGroup.entries()) {
+    members.sort((a, b) => {
+      const pA = a.s.wins * 3 + a.s.draws;
+      const pB = b.s.wins * 3 + b.s.draws;
+      if (pB !== pA) return pB - pA;
+      const gdA = a.s.gf - a.s.ga;
+      const gdB = b.s.gf - b.s.ga;
+      if (gdB !== gdA) return gdB - gdA;
+      return b.s.gf - a.s.gf;
+    });
+    members.forEach(({ team_id, s }, i) => {
+      rows.push({
+        group_code,
+        team_id,
+        rank: i + 1,
+        played: s.played,
+        wins: s.wins,
+        draws: s.draws,
+        losses: s.losses,
+        goals_for: s.gf,
+        goals_against: s.ga,
+        goal_difference: s.gf - s.ga,
+        points: s.wins * 3 + s.draws,
+      });
+    });
+  }
+
+  if (rows.length === 0) return;
+
+  const groupCodes = Array.from(byGroup.keys());
+  await (supabaseAdmin.from("groups") as any).upsert(
+    groupCodes.map((code) => ({ code, name: `קבוצה ${code}` })),
+    { onConflict: "code", ignoreDuplicates: true },
+  );
+  await supabaseAdmin.from("standings").delete().in("group_code", groupCodes);
+  await (supabaseAdmin.from("standings") as any).insert(rows);
+}
+
 export async function recalcAllScoresInternal() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { calculateScore } = await import("./scoring");
@@ -912,6 +1017,11 @@ export async function recalcAllScoresInternal() {
 
 export const recalcAllScores = createServerFn({ method: "POST" }).handler(async () => {
   await recalcAllScoresInternal();
+  return { ok: true };
+});
+
+export const recalcGroupStandings = createServerFn({ method: "POST" }).handler(async () => {
+  await recalcGroupStandingsInternal();
   return { ok: true };
 });
 
