@@ -269,20 +269,19 @@ function GroupCenter() {
 
   return (
     <div className="space-y-5">
-      {/* Group selector */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar">
-        {groups.map((g) => (
-          <button
-            key={g}
-            onClick={() => setSelected(g)}
-            className={
-              "px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition " +
-              (active === g ? "trophy-glow" : "bg-card border border-border")
-            }
-          >
-            בית {g}
-          </button>
-        ))}
+      {/* Group selector — dropdown for A–L support on mobile */}
+      <div className="relative">
+        <select
+          value={active ?? ""}
+          onChange={(e) => setSelected(e.target.value || null)}
+          className="w-full px-4 py-3 rounded-2xl border border-border bg-card font-black text-base appearance-none cursor-pointer"
+          dir="rtl"
+        >
+          {groups.map((g) => (
+            <option key={g} value={g}>בית {g}</option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">▼</span>
       </div>
 
       {/* Stat cards */}
@@ -390,12 +389,29 @@ function Knockout() {
 
   const d = tracker.data;
   const hasKoMatches = (d?.koMatches?.length ?? 0) > 0;
+  const noPicks = !d?.tom?.bracket?.champion_team_id && !d?.rony?.bracket?.champion_team_id;
 
   return (
     <div className="space-y-5">
-      <ChampionPicksCard tom={d?.tom ?? null} rony={d?.rony ?? null} teamMap={teamMap} />
-      <AccuracyCard tom={d?.tom ?? null} rony={d?.rony ?? null} />
-      <BracketProgressCard roundSummary={d?.roundSummary ?? {}} koMatches={d?.koMatches ?? []} navigate={navigate} />
+      {noPicks ? (
+        <div className="card-stadium p-8 text-center">
+          <div className="text-5xl mb-4">🏆</div>
+          <h3 className="text-xl font-black mb-2">התחילו את התחרות</h3>
+          <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+            עדיין לא הוגשו תחזיות.<br />
+            בחרו זוכה למונדיאל ומלאו את הבראקט כדי להתחיל.
+          </p>
+          <Link to="/bracket" className="trophy-glow inline-block px-6 py-3 rounded-2xl font-black">
+            מלא תחזיות
+          </Link>
+        </div>
+      ) : (
+        <>
+          <ChampionPicksCard tom={d?.tom ?? null} rony={d?.rony ?? null} teamMap={teamMap} />
+          <AccuracyCard tom={d?.tom ?? null} rony={d?.rony ?? null} />
+          <BracketProgressCard roundSummary={d?.roundSummary ?? {}} koMatches={d?.koMatches ?? []} navigate={navigate} />
+        </>
+      )}
       {hasKoMatches && (
         <div className="space-y-5">
           {KO_STAGES.map((s) => (
@@ -682,7 +698,16 @@ function StatsHub() {
       </div>
 
       {sub === "scorers" && (
-        <StatsCard title="⚽ מלכי השערים" empty="נתוני כובשים יופיעו ברגע שאירועי שערים יסונכרנו">
+        <StatsCard
+          title="⚽ מלכי השערים"
+          empty={
+            <>
+              <div className="text-3xl mb-2">⚽</div>
+              <div className="font-bold text-sm mb-1">נתוני הכובשים יופיעו כאן</div>
+              <div className="text-xs text-muted-foreground">ברגע שאירועי שערים יתחילו להיאסף במהלך הטורניר.</div>
+            </>
+          }
+        >
           {(d?.topScorers ?? []).map((p, i) => (
             <StatRow
               key={p.playerId}
@@ -698,7 +723,16 @@ function StatsHub() {
       )}
 
       {sub === "assists" && (
-        <StatsCard title="🎯 מלכי הבישולים" empty="נתוני בישולים יופיעו ברגע שאירועי שערים יסונכרנו">
+        <StatsCard
+          title="🎯 מלכי הבישולים"
+          empty={
+            <>
+              <div className="text-3xl mb-2">🎯</div>
+              <div className="font-bold text-sm mb-1">נתוני הבישולים יופיעו כאן</div>
+              <div className="text-xs text-muted-foreground">ברגע שאירועי משחק יתחילו להיאסף.</div>
+            </>
+          }
+        >
           {(d?.topAssists ?? []).map((p, i) => (
             <StatRow
               key={p.assistName}
@@ -756,7 +790,7 @@ function StatsHub() {
   );
 }
 
-function StatsCard({ title, empty, children }: { title: string; empty: string; children: ReactNode }) {
+function StatsCard({ title, empty, children }: { title: string; empty: ReactNode; children: ReactNode }) {
   const items = Array.isArray(children) ? children : [children];
   const hasContent = items.some(Boolean);
   return (

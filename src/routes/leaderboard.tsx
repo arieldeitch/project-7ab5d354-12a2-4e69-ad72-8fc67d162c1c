@@ -60,6 +60,7 @@ function Leaderboard() {
 
   const tom = rows.find((r: any) => r.player.name === "tom");
   const rony = rows.find((r: any) => r.player.name === "rony");
+  const noPredictions = (tom?.predictions ?? 0) === 0 && (rony?.predictions ?? 0) === 0;
 
   return (
     <AppShell title="טבלת האליפות" subtitle="האתגר המשפחתי - תום מול רוני">
@@ -72,7 +73,7 @@ function Leaderboard() {
         </div>
       )}
 
-      {tom && rony && (
+      {tom && rony && !noPredictions && (
         <div className="card-stadium p-4 mb-6">
           <h2 className="text-lg font-black mb-3 text-center">⚔️ ראש בראש</h2>
           <div className="grid grid-cols-2 gap-3">

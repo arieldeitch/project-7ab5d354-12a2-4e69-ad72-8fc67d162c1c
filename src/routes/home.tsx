@@ -156,8 +156,9 @@ function Home() {
         <StatPill label="הישגים" value={profile.data?.stats.achievementsCount ?? 0} accent="accent" />
       </div>
 
-      {/* Rivalry card */}
-      {(lb.data?.length ?? 0) >= 2 && (
+      {/* Rivalry card — hidden until at least one prediction has been scored */}
+      {(lb.data?.length ?? 0) >= 2 &&
+        !(lb.data as any[]).every((r: any) => (r.predictions ?? 0) === 0) && (
         <RivalryCard
           leader={(lb.data as any[])[0]}
           challenger={(lb.data as any[])[1]}
