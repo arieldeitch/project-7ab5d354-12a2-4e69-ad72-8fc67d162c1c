@@ -1141,6 +1141,139 @@ export const getMatchDetail = createServerFn({ method: "GET" })
     return { match, predictions };
   });
 
+/* ---------- Statistics Hub ---------- */
+
+export const getStatsHub = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const [
+    { data: goalEvents },
+    { data: footballPlayers },
+    { data: teams },
+    { data: standings },
+    { data: finishedMatches },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("match_events")
+      .select("player_id, player_name, team_id")
+      .eq("event_type", "Goal"),
+    supabaseAdmin
+      .from("football_players")
+      .select("id, name, name_he"),
+    supabaseAdmin
+      .from("teams")
+      .select("id, name, name_he, flag_url, logo_url, code"),
+    supabaseAdmin
+      .from("standings")
+      .select("team_id, goals_for, goals_against, played"),
+    supabaseAdmin
+      .from("matches")
+      .select("home_team_id, away_team_id, home_score, away_score, kickoff_at")
+      .eq("status", "finished")
+      .not("home_score", "is", null)
+      .not("away_score", "is", null)
+      .order("kickoff_at", { ascending: true }),
+  ]);
+
+  const playerMap = new Map((footballPlayers ?? []).map((p) => [p.id, p]));
+  const teamMap = new Map((teams ?? []).map((t) => [t.id, t]));
+
+  // Top Scorers — aggregate by player_id across all goal events
+  const scorerMap = new Map<number, { playerName: string; playerNameHe: string | null; teamId: number | null; goals: number }>();
+  for (const e of goalEvents ?? []) {
+    if (!e.player_id) continue;
+    const ex = scorerMap.get(e.player_id);
+    if (ex) {
+      ex.goals++;
+    } else {
+      const fp = playerMap.get(e.player_id);
+      const rawName = e.player_name ?? "";
+      scorerMap.set(e.player_id, {
+        playerName: fp?.name ?? (rawName.includes("::") ? rawName.split("::")[0] : rawName),
+        playerNameHe: fp?.name_he ?? null,
+        teamId: e.team_id,
+        goals: 1,
+      });
+    }
+  }
+  const topScorers = Array.from(scorerMap.entries())
+    .map(([playerId, d]) => {
+      const t = d.teamId ? teamMap.get(d.teamId) : null;
+      return { playerId, playerName: d.playerName, playerNameHe: d.playerNameHe, teamName: t?.name ?? null, teamNameHe: t?.name_he ?? null, flagUrl: t?.flag_url ?? null, teamCode: t?.code ?? null, goals: d.goals };
+    })
+    .sort((a, b) => b.goals - a.goals)
+    .slice(0, 10);
+
+  // Top Assists — extracted from player_name "scorer::assist" encoding on Goal events
+  const assistMap = new Map<string, { teamId: number | null; assists: number }>();
+  for (const e of goalEvents ?? []) {
+    if (!e.player_name?.includes("::")) continue;
+    const assistName = e.player_name.split("::")[1]?.trim();
+    if (!assistName) continue;
+    const ex = assistMap.get(assistName);
+    if (ex) {
+      ex.assists++;
+    } else {
+      assistMap.set(assistName, { teamId: e.team_id, assists: 1 });
+    }
+  }
+  const topAssists = Array.from(assistMap.entries())
+    .map(([assistName, d]) => {
+      const t = d.teamId ? teamMap.get(d.teamId) : null;
+      return { assistName, teamName: t?.name ?? null, teamNameHe: t?.name_he ?? null, flagUrl: t?.flag_url ?? null, teamCode: t?.code ?? null, assists: d.assists };
+    })
+    .sort((a, b) => b.assists - a.assists)
+    .slice(0, 10);
+
+  // Best Attack — teams ranked by goals scored (from standings.goals_for)
+  const bestAttack = (standings ?? [])
+    .filter((s) => s.played > 0)
+    .map((s) => {
+      const t = teamMap.get(s.team_id);
+      return { teamId: s.team_id, teamName: t?.name ?? String(s.team_id), teamNameHe: t?.name_he ?? null, flagUrl: t?.flag_url ?? null, teamCode: t?.code ?? null, goalsFor: s.goals_for ?? 0, played: s.played ?? 0 };
+    })
+    .sort((a, b) => b.goalsFor - a.goalsFor || a.played - b.played)
+    .slice(0, 10);
+
+  // Best Defense — teams ranked by fewest goals conceded (from standings.goals_against)
+  const bestDefense = (standings ?? [])
+    .filter((s) => s.played > 0)
+    .map((s) => {
+      const t = teamMap.get(s.team_id);
+      return { teamId: s.team_id, teamName: t?.name ?? String(s.team_id), teamNameHe: t?.name_he ?? null, flagUrl: t?.flag_url ?? null, teamCode: t?.code ?? null, goalsAgainst: s.goals_against ?? 0, played: s.played ?? 0 };
+    })
+    .sort((a, b) => a.goalsAgainst - b.goalsAgainst || b.played - a.played)
+    .slice(0, 10);
+
+  // Team Form — W/D/L for last 5 finished matches per team, sorted by form points desc
+  const formMap = new Map<number, Array<"W" | "D" | "L">>();
+  for (const m of finishedMatches ?? []) {
+    const hid = m.home_team_id;
+    const aid = m.away_team_id;
+    const hs = m.home_score as number;
+    const as_ = m.away_score as number;
+    if (!hid || !aid) continue;
+    const homeResult: "W" | "D" | "L" = hs > as_ ? "W" : hs === as_ ? "D" : "L";
+    const awayResult: "W" | "D" | "L" = as_ > hs ? "W" : as_ === hs ? "D" : "L";
+    if (!formMap.has(hid)) formMap.set(hid, []);
+    if (!formMap.has(aid)) formMap.set(aid, []);
+    formMap.get(hid)!.push(homeResult);
+    formMap.get(aid)!.push(awayResult);
+  }
+  const formPoints = (form: Array<"W" | "D" | "L">) =>
+    form.reduce((s, r) => s + (r === "W" ? 3 : r === "D" ? 1 : 0), 0);
+  const teamForm = Array.from(formMap.entries())
+    .map(([teamId, allResults]) => {
+      const t = teamMap.get(teamId);
+      const form = allResults.slice(-5);
+      return { teamId, teamName: t?.name ?? String(teamId), teamNameHe: t?.name_he ?? null, flagUrl: t?.flag_url ?? null, teamCode: t?.code ?? null, form, formPts: formPoints(form) };
+    })
+    .sort((a, b) => b.formPts - a.formPts)
+    .map(({ formPts, ...rest }) => rest);
+
+  return { topScorers, topAssists, bestAttack, bestDefense, teamForm };
+});
+
 /* ---------- Knockout Tracker ---------- */
 
 export const getKnockoutTracker = createServerFn({ method: "GET" }).handler(async () => {

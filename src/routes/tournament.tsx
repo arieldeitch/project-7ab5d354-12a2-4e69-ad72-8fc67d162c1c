@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -8,6 +8,7 @@ import {
   getMatchesByGroup,
   getAllGroupMatches,
   getKnockoutTracker,
+  getStatsHub,
 } from "@/lib/wc.functions";
 import { RequirePlayer } from "@/components/RequirePlayer";
 import { AppShell } from "@/components/AppShell";
@@ -29,6 +30,7 @@ const TABS = [
   { id: "group-view", label: "מרכז הבתים" },
   { id: "ko", label: "נוקאאוט" },
   { id: "trophy", label: "הגביע 🏆" },
+  { id: "stats", label: "📊 סטטיסטיקות" },
 ] as const;
 
 function Tournament() {
@@ -53,6 +55,7 @@ function Tournament() {
       {tab === "group-view" && <GroupCenter />}
       {tab === "ko" && <Knockout />}
       {tab === "trophy" && <TrophyPage />}
+      {tab === "stats" && <StatsHub />}
     </AppShell>
   );
 }
@@ -633,6 +636,185 @@ function TrophyPage() {
       ) : (
         <p className="text-sm text-muted-foreground">הגמר עדיין רחוק... כל משחק חשוב!</p>
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────────── Statistics Hub ─────────────────────────── */
+
+const STATS_SUBTABS = [
+  { id: "scorers",  label: "⚽ שערים" },
+  { id: "assists",  label: "🎯 בישולים" },
+  { id: "attack",   label: "🔥 התקפה" },
+  { id: "defense",  label: "🛡️ הגנה" },
+  { id: "form",     label: "📈 פורמה" },
+] as const;
+
+type StatsSub = (typeof STATS_SUBTABS)[number]["id"];
+
+function StatsHub() {
+  const statsFn = useServerFn(getStatsHub);
+  const stats = useQuery({
+    queryKey: ["stats-hub"],
+    queryFn: () => statsFn(),
+    refetchInterval: 5 * 60_000,
+  });
+  const [sub, setSub] = useState<StatsSub>("scorers");
+
+  if (stats.isLoading) return <div className="card-stadium h-64 animate-pulse" />;
+  const d = stats.data;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        {STATS_SUBTABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSub(t.id)}
+            className={
+              "px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition " +
+              (sub === t.id ? "trophy-glow" : "bg-card border border-border")
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {sub === "scorers" && (
+        <StatsCard title="⚽ מלכי השערים" empty="נתוני כובשים יופיעו ברגע שאירועי שערים יסונכרנו">
+          {(d?.topScorers ?? []).map((p, i) => (
+            <StatRow
+              key={p.playerId}
+              rank={i + 1}
+              team={{ flag_url: p.flagUrl, code: p.teamCode }}
+              name={p.playerNameHe ?? p.playerName}
+              sub={p.teamNameHe ?? p.teamName ?? ""}
+              value={p.goals}
+              valueLabel="שערים"
+            />
+          ))}
+        </StatsCard>
+      )}
+
+      {sub === "assists" && (
+        <StatsCard title="🎯 מלכי הבישולים" empty="נתוני בישולים יופיעו ברגע שאירועי שערים יסונכרנו">
+          {(d?.topAssists ?? []).map((p, i) => (
+            <StatRow
+              key={p.assistName}
+              rank={i + 1}
+              team={{ flag_url: p.flagUrl, code: p.teamCode }}
+              name={p.assistName}
+              sub={p.teamNameHe ?? p.teamName ?? ""}
+              value={p.assists}
+              valueLabel="בישולים"
+            />
+          ))}
+        </StatsCard>
+      )}
+
+      {sub === "attack" && (
+        <StatsCard title="🔥 מתקפות חדות" empty="נתונים יופיעו לאחר תחילת המשחקים">
+          {(d?.bestAttack ?? []).map((t, i) => (
+            <StatRow
+              key={t.teamId}
+              rank={i + 1}
+              team={{ flag_url: t.flagUrl, code: t.teamCode }}
+              name={t.teamNameHe ?? t.teamName}
+              sub={`${t.played} משחקים`}
+              value={t.goalsFor}
+              valueLabel="שערים"
+            />
+          ))}
+        </StatsCard>
+      )}
+
+      {sub === "defense" && (
+        <StatsCard title="🛡️ הגנה חסינה" empty="נתונים יופיעו לאחר תחילת המשחקים">
+          {(d?.bestDefense ?? []).map((t, i) => (
+            <StatRow
+              key={t.teamId}
+              rank={i + 1}
+              team={{ flag_url: t.flagUrl, code: t.teamCode }}
+              name={t.teamNameHe ?? t.teamName}
+              sub={`${t.played} משחקים`}
+              value={t.goalsAgainst}
+              valueLabel="ספגו"
+            />
+          ))}
+        </StatsCard>
+      )}
+
+      {sub === "form" && (
+        <StatsCard title="📈 פורמה אחרונה" empty="נתוני פורמה יופיעו לאחר תחילת המשחקים">
+          {(d?.teamForm ?? []).map((t) => (
+            <FormRow key={t.teamId} team={{ flag_url: t.flagUrl, code: t.teamCode }} name={t.teamNameHe ?? t.teamName} form={t.form} />
+          ))}
+        </StatsCard>
+      )}
+    </div>
+  );
+}
+
+function StatsCard({ title, empty, children }: { title: string; empty: string; children: ReactNode }) {
+  const items = Array.isArray(children) ? children : [children];
+  const hasContent = items.some(Boolean);
+  return (
+    <div className="card-stadium overflow-hidden">
+      <div className="px-4 py-3 border-b border-border">
+        <h3 className="font-black text-gold">{title}</h3>
+      </div>
+      {!hasContent ? (
+        <div className="p-5 text-center text-sm text-muted-foreground">{empty}</div>
+      ) : (
+        <div className="divide-y divide-border/60 px-3">{children}</div>
+      )}
+    </div>
+  );
+}
+
+function StatRow({ rank, team, name, sub, value, valueLabel }: {
+  rank: number;
+  team: { flag_url?: string | null; code?: string | null };
+  name: string;
+  sub: string;
+  value: number;
+  valueLabel: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2.5">
+      <span className="text-sm font-black text-muted-foreground w-5 text-center shrink-0 tabular-nums">{rank}</span>
+      <TeamBadge team={team} size={28} className="shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm leading-snug truncate">{name}</div>
+        {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
+      </div>
+      <div className="text-center shrink-0">
+        <div className="text-xl font-black text-gold tabular-nums leading-none">{value}</div>
+        <div className="text-[10px] text-muted-foreground mt-0.5">{valueLabel}</div>
+      </div>
+    </div>
+  );
+}
+
+const FORM_ICONS: Record<"W" | "D" | "L", string> = { W: "✅", D: "➖", L: "❌" };
+
+function FormRow({ team, name, form }: {
+  team: { flag_url?: string | null; code?: string | null };
+  name: string;
+  form: Array<"W" | "D" | "L">;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2.5">
+      <TeamBadge team={team} size={28} className="shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm truncate">{name}</div>
+      </div>
+      <div className="flex gap-1 shrink-0" dir="ltr">
+        {form.map((r, i) => (
+          <span key={i} className="text-base leading-none">{FORM_ICONS[r]}</span>
+        ))}
+      </div>
     </div>
   );
 }
